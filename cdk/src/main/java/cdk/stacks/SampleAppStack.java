@@ -54,10 +54,10 @@ public class SampleAppStack extends Stack {
         sampleAppTaskDefinition.addContainer("sampleAppTaskContainerDefinition", ContainerDefinitionOptions.builder()
                 .image(sampleAppEcrImage)
                 .memoryLimitMiB(512)
-                .cpu(1)
+                .cpu(1024)
                 .build())
                 .addPortMappings(PortMapping.builder()
-                        .containerPort(80)
+                        .containerPort(8080)
                         .hostPort(80)
                         .protocol(Protocol.TCP)
                         .build());

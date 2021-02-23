@@ -1,0 +1,24 @@
+plugins {
+    id("org.springframework.boot") version "2.4.3"
+    id("io.spring.dependency-management") version "1.0.11.RELEASE"
+}
+
+group = "aws.spring"
+version = "0.0.1-SNAPSHOT"
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+}
+
+val dockerImageTag = "aws-ecs-sample-app/$version".toLowerCase()
+
+tasks.register<Exec>("buildDockerfile") {
+    commandLine("docker", "build", "-t", dockerImageTag, ".")
+    standardOutput = System.out
+}
+
+tasks.register<Exec>("runOnDocker") {
+    commandLine("docker", "run", "-p", "8080:8080", dockerImageTag)
+    standardOutput = System.out
+}

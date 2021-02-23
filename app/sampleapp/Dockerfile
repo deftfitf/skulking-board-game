@@ -1,16 +1,11 @@
-FROM ubuntu:18.04
+FROM adoptopenjdk/openjdk11:jdk-11.28-alpine-slim
 
-RUN apt-get update && \
-    apt-get -y install apache2
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 
-RUN echo 'Hello World!' > /var/www/html/index.html
+ARG JAR_FILE=build/libs/*.jar
+COPY ${JAR_FILE} app.jar
 
-RUN echo '. /etc/apache2/envvars' > /root/run_apache.sh && \
-    echo 'mkdir -p /var/run/apache2' >> /root/run_apache.sh && \
-    echo 'mkdir -p /var/lock/apache2' >> /root/run_apache.sh && \
-    echo '/usr/sbin/apache2 -D FOREGROUND' >> /root/run_apache.sh && \
-    chmod 755 /root/run_apache.sh
+EXPOSE 8080
 
-EXPOSE 80
-
-CMD /root/run_apache.sh
+ENTRYPOINT ["java","-jar","/app.jar"]

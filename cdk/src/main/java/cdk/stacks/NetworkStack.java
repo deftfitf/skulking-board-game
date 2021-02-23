@@ -25,7 +25,7 @@ public class NetworkStack extends Stack {
                 .enableDnsHostnames(true)
                 .enableDnsSupport(true)
                 .maxAzs(1)
-                .natGateways(1)
+                .natGateways(0)
                 .subnetConfiguration(List.of(
                         SubnetConfiguration.builder()
                                 .cidrMask(24)
@@ -35,7 +35,7 @@ public class NetworkStack extends Stack {
                                 .build(),
                         SubnetConfiguration.builder()
                                 .cidrMask(24)
-                                .subnetType(SubnetType.PRIVATE)
+                                .subnetType(SubnetType.ISOLATED)
                                 .name("isolated-subnet-1")
                                 .reserved(false)
                                 .build()
