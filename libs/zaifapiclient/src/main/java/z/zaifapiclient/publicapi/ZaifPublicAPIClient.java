@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class ZaifPublicAPIClient {
 
-    private ZaifPublicService zaifPublicService;
+    private final ZaifPublicService zaifPublicService;
 
     public ZaifPublicAPIClient(String baseUrl) {
         final var objectMapper = new ObjectMapper();
@@ -30,34 +30,34 @@ public class ZaifPublicAPIClient {
     }
 
     public CompletableFuture<List<Currency>> getAllCurrency() {
-        return RetrofitHelper.toFuture(zaifPublicService.getAllCurrency());
+        return zaifPublicService.getAllCurrency();
     }
 
     public CompletableFuture<List<Currency>> getCurrency(String currency) {
-        return RetrofitHelper.toFuture(zaifPublicService.getCurrency(currency));
+        return zaifPublicService.getCurrency(currency);
     }
 
     public CompletableFuture<List<CurrencyPair>> getAllCurrencyPairs() {
-        return RetrofitHelper.toFuture(zaifPublicService.getAllCurrencyPairs());
+        return zaifPublicService.getAllCurrencyPairs();
     }
 
     public CompletableFuture<List<CurrencyPair>> getCurrencyPair(String currencyPair) {
-        return RetrofitHelper.toFuture(zaifPublicService.getCurrencyPair(currencyPair));
+        return zaifPublicService.getCurrencyPair(currencyPair);
     }
 
     public CompletableFuture<LastPrice> getLastPrice(String currencyPair) {
-        return RetrofitHelper.toFuture(zaifPublicService.getLastPrice(currencyPair));
+        return zaifPublicService.getLastPrice(currencyPair);
     }
 
     public CompletableFuture<Ticker> getTicker(String currencyPair) {
-        return RetrofitHelper.toFuture(zaifPublicService.getTicker(currencyPair));
+        return zaifPublicService.getTicker(currencyPair);
     }
 
     public CompletableFuture<List<Trade>> getTrades(String currencyPair) {
-        return RetrofitHelper.toFuture(zaifPublicService.getTrades(currencyPair));
+        return zaifPublicService.getTrades(currencyPair);
     }
 
     public CompletableFuture<OrderBook> getOrderBook(String currencyPair) {
-        return RetrofitHelper.toFuture(zaifPublicService.getOrderBook(currencyPair));
+        return zaifPublicService.getOrderBook(currencyPair);
     }
 }

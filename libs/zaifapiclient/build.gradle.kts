@@ -4,4 +4,6 @@ dependencies {
 
     implementation("com.squareup.retrofit2", "retrofit", "2.9.0")
     implementation("com.squareup.retrofit2:converter-jackson:2.9.0")
+
+    implementation("commons-codec:commons-codec:1.15")
 }
