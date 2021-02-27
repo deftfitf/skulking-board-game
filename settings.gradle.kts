@@ -10,3 +10,6 @@
 rootProject.name = "aws-ecs-spring-boot"
 include("cdk")
 include("app:sampleapp")
+include("libs")
+
+include("libs:zaifapiclient")

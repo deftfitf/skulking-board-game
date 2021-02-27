@@ -14,6 +14,10 @@ plugins {
     id("com.github.johnrengelman.shadow") version "4.0.1" apply false
 }
 
+ext {
+    val lombokVersion = "1.18.16"
+}
+
 subprojects {
     apply(plugin = "java")
 
@@ -29,5 +33,10 @@ subprojects {
 
     tasks.withType<Test> {
         useJUnitPlatform()
+    }
+
+    dependencies {
+        testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
+        testImplementation("org.assertj:assertj-core:3.19.0")
     }
 }
