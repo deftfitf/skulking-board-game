@@ -31,12 +31,11 @@ subprojects {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    tasks.withType<Test> {
-        useJUnitPlatform()
-    }
-
     dependencies {
-        testImplementation("org.junit.jupiter:junit-jupiter:5.7.1")
+        implementation("org.projectlombok:lombok:1.18.8")
+        annotationProcessor("org.projectlombok:lombok:1.18.20")
+
+        testImplementation("junit:junit:4.13.1")
         testImplementation("org.assertj:assertj-core:3.19.0")
     }
 }
