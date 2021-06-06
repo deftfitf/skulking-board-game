@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class GameRoomActor
         extends EventSourcedBehavior<GameCommand, GameEvent, GameState> {
 
-    private Map<PlayerId, ActorRef<GameEvent>> activeConnections = new HashMap<>();
+    private final Map<PlayerId, ActorRef<GameEvent>> activeConnections = new HashMap<>();
 
     public static final EntityTypeKey<GameCommand> ENTITY_TYPE_KEY =
             EntityTypeKey.create(GameCommand.class, "GameRoomActorCommand");

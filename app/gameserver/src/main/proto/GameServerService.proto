@@ -1,0 +1,447 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "gameserver.service.grpc";
+option java_outer_classname = "GameServiceProto";
+
+package gameserver;
+
+service GameServerService {
+    rpc Connect (stream GameCommand) returns (stream GameEvent) {}
+}
+
+message GameCommand {
+    string game_room_id = 1;
+    string player_id = 2;
+
+    oneof cmd {
+        Join join = 3;
+        Leave leave = 4;
+        GameStart game_start = 5;
+        BidDeclare bid_declare = 6;
+        PlayCard play_card = 7;
+        NextTrickLeadPlayerChange next_trick_lead_player_change = 8;
+        PlayerHandChange player_hand_change = 9;
+        FuturePredicateFinish future_predicate_finish = 10;
+        BidDeclareChange bid_declare_change = 11;
+        ReplayGame replay_game = 12;
+        EndGame end_game = 13;
+        SnapshotRequest snapshot_request = 14;
+        NewConnection new_connection = 15;
+        CreateRoom create_room = 16;
+    }
+
+    message CreateRoom {
+        GameRule game_rule = 1;
+    }
+
+    message NewConnection {
+    }
+
+    message Join {
+    }
+
+    message Leave {
+    }
+
+    message GameStart {
+    }
+
+    message BidDeclare {
+        int32 bid = 1;
+    }
+
+    message PlayCard {
+        Card card = 1;
+    }
+
+    message NextTrickLeadPlayerChange {
+        string new_lead_player_id = 1;
+    }
+
+    message PlayerHandChange {
+        repeated string card_id = 1;
+    }
+
+    message FuturePredicateFinish {
+    }
+
+    message BidDeclareChange {
+        int32 bid = 3;
+    }
+
+    message ReplayGame {
+    }
+
+    message EndGame {
+    }
+
+    message SnapshotRequest {
+    }
+}
+
+message GameEvent {
+
+    oneof event {
+        Initialized initialized = 1;
+        ConnectionEstablished connection_established = 2;
+        ConnectionClosed connection_closed = 3;
+        APlayerJoined a_player_joined = 4;
+        APlayerLeft a_player_left = 5;
+        RoomDealerChanged room_dealer_changed = 6;
+        GameStarted game_started = 7;
+        BiddingStarted bidding_started = 8;
+        APlayerBidDeclared a_player_bid_declared = 9;
+        RoundStarted round_started = 10;
+        TrickStarted trick_started = 11;
+        APlayerTrickPlayed a_player_trick_played = 12;
+        APlayerWon a_player_won = 13;
+        AllRanAway all_ran_away = 14;
+        KrakenAppeared kraken_appeared = 15;
+        DeclareBidChangeAvailable declare_bid_change_available = 16;
+        NextTrickLeadPlayerChangeableNotice next_trick_lead_player_changeable_notice = 17;
+        HandChangeAvailableNotice hand_change_available_notice = 18;
+        FuturePredicateAvailable future_predicate_available = 19;
+        RoundFinished round_finished = 20;
+        NextTrickLeadPlayerChanged next_trick_lead_player_changed = 21;
+        PlayerHandChanged player_hand_changed = 22;
+        FuturePredicated future_predicated = 23;
+        BidDeclareChanged bid_declare_changed = 24;
+        GameFinished game_finished = 25;
+        GameReplayed game_replayed = 26;
+        GameEnded game_ended = 27;
+        GameSnapshot game_snapshot = 28;
+        GameException game_exception = 29;
+        KeepAlive keep_alive = 30;
+    }
+
+    message Initialized {
+        string first_dealer_id = 1;
+        GameRule game_rule = 2;
+    }
+
+    message ConnectionEstablished {
+        string player_id = 1;
+    }
+
+    message ConnectionClosed {
+        string player_id = 1;
+    }
+
+    message APlayerJoined {
+        string player_id = 1;
+    }
+
+    message APlayerLeft {
+        string player_id = 1;
+    }
+
+    message RoomDealerChanged {
+        string old_dealer = 1;
+        string new_dealer = 2;
+    }
+
+    message GameStarted {
+        string player_id = 1;
+    }
+
+    message BiddingStarted {
+    }
+
+    message APlayerBidDeclared {
+        string player_id = 1;
+        int32 bid_declared = 2;
+    }
+
+    message RoundStarted {
+        repeated JoinedPlayer joined_players = 1;
+
+        message JoinedPlayer {
+            string player_id = 1;
+            repeated string card_id = 2;
+        }
+    }
+
+    message TrickStarted {
+    }
+
+    message APlayerTrickPlayed {
+        string player_id = 1;
+        Card played_card = 2;
+    }
+
+    message APlayerWon {
+        string winner_id = 1;
+        Card card = 2;
+        int32 trick_bonus = 3;
+    }
+
+    message AllRanAway {
+        string winner_id = 1;
+        Card card = 2;
+    }
+
+    message KrakenAppeared {
+        string must_have_won = 1;
+    }
+
+    message DeclareBidChangeAvailable {
+        string player_id = 1;
+        int32 min = 2;
+        int32 max = 3;
+    }
+
+    message NextTrickLeadPlayerChangeableNotice {
+        string player_id = 1;
+    }
+
+    message HandChangeAvailableNotice {
+        string player_id = 1;
+        repeated string draw_cards = 2;
+    }
+
+    message FuturePredicateAvailable {
+        string player_id = 1;
+        repeated string deck_card = 2;
+    }
+
+    message RoundFinished {
+        map<string, Score> round_score = 1;
+    }
+
+    message NextTrickLeadPlayerChanged {
+        string player_id = 1;
+        string new_lead_player_id = 2;
+    }
+
+    message PlayerHandChanged {
+        string player_id = 1;
+        repeated string return_cards = 2;
+    }
+
+    message FuturePredicated {
+        string predicated_player_id = 1;
+    }
+
+    message BidDeclareChanged {
+        string changed_player_id = 1;
+        int32 changed_bid = 2;
+    }
+
+    message GameFinished {
+        string game_winner_id = 1;
+        ScoreBoard score_board = 2;
+    }
+
+    message GameReplayed {
+        string game_winner_id = 1;
+    }
+
+    message GameEnded {
+    }
+
+    message GameSnapshot {
+        GameState game_state = 1;
+    }
+
+    message GameException {
+        InvalidInputType invalid_input_type = 1;
+    }
+
+    enum InvalidInputType {
+        UNKNOWN = 0;
+        FAILED_JOIN_EXCEED_MAX_NUMBER_OF_PLAYERS = 1;
+        FAILED_JOIN_ALREADY_JOINED_PLAYER = 2;
+        FAILED_LEAVE_SPECIFIED_PLAYER_NOT_EXISTS = 3;
+        FAILED_START_INSUFFICIENT_PLAYERS = 4;
+        FAILED_START_GAME_NOT_DEALER = 5;
+
+        ROUND_HAS_ALREADY_ENDED = 6;
+        ROUND_HAS_NOT_ENDED_YET = 7;
+        IS_NOT_NEXT_PLAYER = 8;
+        HAS_NOT_CARD = 9;
+        CANT_PUT_CARD_ON_FIELD = 10;
+
+        INVALID_CHANGE_BID_VALUE = 11;
+        ILLEGAL_PLAYER_ACTION_DETECTED = 12;
+
+        SPECIFIED_PLAYER_ID_DOES_NOT_EXISTS = 13;
+        DECLARED_INVALID_BID_VALUE = 14;
+
+        RETURN_CARD_SIZE_INVALID = 15;
+        RETURN_CARD_PLAYER_NOT_HAS = 16;
+    }
+
+    message KeepAlive {
+    }
+}
+
+message Card {
+    string card_id = 1;
+    oneof card {
+        NumberCard number_card = 2;
+        StandardPirates standard_pirates = 3;
+        RoiseDLaney roise_d_laney = 4;
+        BahijiTheBandit bahiji_the_bandit = 5;
+        RascalOfRoatan rascal_of_roatan = 6;
+        JanitaJade janita_jade = 7;
+        HarryTheGiant harry_the_giant = 8;
+        StandardEscape standard_escape = 9;
+        Tigress tigress = 10;
+        Skulking skulking = 11;
+        Mermaid mermaid = 12;
+        Kraken kraken = 13;
+    }
+
+    message NumberCard {
+        int32 number = 2;
+        CardColor card_color = 3;
+    }
+
+    enum CardColor {
+        UNKNOWN = 0;
+        GREEN = 1;
+        YELLOW = 2;
+        PURPLE = 3;
+        BLACK = 4;
+    }
+
+    message StandardPirates {
+    }
+
+    message RoiseDLaney {
+    }
+
+    message BahijiTheBandit {
+    }
+
+    message RascalOfRoatan {
+        int32 bet_score = 1;
+    }
+
+    message JanitaJade {
+    }
+
+    message HarryTheGiant {
+    }
+
+    message StandardEscape {
+    }
+
+    message Tigress {
+        bool is_pirates = 1;
+    }
+
+    message Skulking {
+    }
+
+    message Mermaid {
+    }
+
+    message Kraken {
+    }
+
+}
+
+message GameRule {
+    int32 room_size = 1;
+    int32 n_of_rounds = 2;
+    DeckType deck_type = 3;
+
+    enum DeckType {
+        UNKNOWN = 0;
+        STANDARD = 1;
+        EXPANSION = 2;
+    }
+}
+
+message ScoreBoard {
+    repeated RoundScore round_scores = 1;
+
+    message RoundScore {
+        map<string, Score> round_score = 1;
+    }
+}
+
+message Score {
+    int32 score = 1;
+    int32 bonus = 2;
+}
+
+message GameState {
+    oneof state {
+        StartPhase start_phase = 1;
+        BiddingPhase bidding_phase = 2;
+        TrickPhase trick_phase = 3;
+        NextTrickLeadPlayerChanging next_trick_lead_player_changing = 4;
+        HandChangeWaiting hand_change_waiting = 5;
+        FuturePredicateWaiting future_predicate_waiting = 6;
+        BidDeclareChangeWaiting bid_declare_change_waiting = 7;
+        FinishedPhase finished_phase = 8;
+    }
+
+    message StartPhase {
+        GameRule game_rule = 1;
+        string dealer_id = 2;
+        repeated string player_ids = 3;
+    }
+
+    message BiddingPhase {
+        GameRule game_rule = 1;
+        int32 round = 2;
+        string dealer_id = 3;
+        repeated BiddingPlayer bidding_players = 4;
+
+        message BiddingPlayer {
+            string player_id = 1;
+            bool is_bid = 2;
+        }
+    }
+
+    message TrickPhase {
+        GameRule game_rule = 1;
+        int32 round = 2;
+        string dealer_id = 3;
+        repeated TrickPlayer trick_players = 4;
+        repeated PlayedCard field = 7;
+        Card.CardColor must_follow = 6;
+        int32 trick = 8;
+        ScoreBoard score_board = 9;
+
+        message TrickPlayer {
+            string player_id = 1;
+            int32 declared_bid = 2;
+            int32 took_trick = 3;
+            int32 took_bonus = 4;
+        }
+
+        message PlayedCard {
+            string player_id = 1;
+            Card card = 2;
+        }
+    }
+
+    message NextTrickLeadPlayerChanging {
+        string changing_player_id = 1;
+    }
+
+    message HandChangeWaiting {
+        string changing_player_id = 1;
+    }
+
+    message FuturePredicateWaiting {
+        string predicating_player_id = 1;
+    }
+
+    message BidDeclareChangeWaiting {
+        string changing_player_id = 1;
+    }
+
+    message FinishedPhase {
+        GameRule game_rule = 1;
+        string last_winner_id = 2;
+        repeated string player_ids = 3;
+        ScoreBoard score_board = 4;
+    }
+
+}
