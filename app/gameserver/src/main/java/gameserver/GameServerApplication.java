@@ -19,14 +19,19 @@ public class GameServerApplication {
     public static void main(String[] args) {
         final ActorSystem<Void> system = ActorSystem.create(Behaviors.empty(), "GameServerSystem");
         try {
-            init(system);
+            if (args.length <= 0) {
+                throw new RuntimeException("arguments required");
+            }
+
+            final var serverPort = Integer.parseInt(args[0]);
+            init(system, serverPort);
         } catch (Exception e) {
             log.error("Terminating due to initialization failure.", e);
             system.terminate();
         }
     }
 
-    public static void init(ActorSystem<Void> system) {
+    public static void init(ActorSystem<Void> system, int serverPort) {
         AkkaManagement.get(system).start();
         ClusterBootstrap.get(system).start();
 
@@ -45,7 +50,7 @@ public class GameServerApplication {
 
         CompletionStage<ServerBinding> bound =
                 Http.get(system)
-                        .newServerAt("127.0.0.1", 8080)
+                        .newServerAt("127.0.0.1", serverPort)
                         .bind(service);
 
         bound.thenAccept(binding ->

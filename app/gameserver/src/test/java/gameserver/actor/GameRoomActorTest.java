@@ -88,11 +88,13 @@ public class GameRoomActorTest {
         assertThat(connectionEstablished)
                 .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.ConnectionEstablished.class))
                 .satisfies(e -> assertThat(e.getPlayerId()).isEqualTo(dealer));
+        dealerProbe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         final var participant = new PlayerId("participant");
         final var participantJoin = GameCommand.Join.builder().playerId(participant).playerRef(participantProbe.getRef()).build();
         gameRoom.tell(participantJoin);
         participantProbe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        participantProbe.expectMessageClass(GameEvent.GameSnapshot.class);
         final var aPlayerJoined = participantProbe.receiveMessage();
         assertThat(aPlayerJoined)
                 .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.APlayerJoined.class))
@@ -129,6 +131,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         gameRoom.tell(GameCommand.Leave.builder().playerId(new PlayerId("notExistsPlayerId")).playerRef(probe.getRef()).build());
         final var playerNotExists = probe.receiveMessage();
@@ -152,11 +155,13 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         final var participant = new PlayerId("participant");
         final var participantJoin = GameCommand.Join.builder().playerId(participant).playerRef(participantProbe.getRef()).build();
         gameRoom.tell(participantJoin);
         participantProbe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        participantProbe.expectMessageClass(GameEvent.GameSnapshot.class);
         final var aPlayerJoined = participantProbe.receiveMessage();
         assertThat(aPlayerJoined)
                 .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.APlayerJoined.class))
@@ -185,6 +190,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         gameRoom.tell(GameCommand.Leave.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessage(GameEvent.RoomDealerChanged.builder()
@@ -195,6 +201,7 @@ public class GameRoomActorTest {
 
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(participant).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
         gameRoom.tell(GameCommand.SnapshotRequest.builder().playerId(participant).build());
 
         assertThat(probe.receiveMessage())
@@ -221,6 +228,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         gameRoom.tell(GameCommand.GameStart.builder().playerId(dealer).build());
         final var gameException = probe.receiveMessage();
@@ -249,7 +257,9 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(participant1).playerRef(participantProbe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
         participantProbe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        participantProbe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         gameRoom.tell(GameCommand.GameStart.builder().playerId(participant1).build());
         assertThat(participantProbe.receiveMessage())
@@ -295,7 +305,9 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(participant).playerRef(participantProbe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
         participantProbe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        participantProbe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // declare bid
         gameRoom.tell(GameCommand.BidDeclare.builder().playerId(dealer).bid(0).build());
@@ -341,6 +353,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         gameRoom.tell(GameCommand.BidDeclare.builder().playerId(new PlayerId("notParticipantId")).bid(3).build());
         probe.expectNoMessage();
@@ -387,6 +400,7 @@ public class GameRoomActorTest {
             gameRoom.tell(GameCommand.Store.builder().state(trickState).build());
             gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
             probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+            probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
             // dealer plays trick
             gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(greenCard).build());
@@ -456,6 +470,7 @@ public class GameRoomActorTest {
             gameRoom.tell(GameCommand.Store.builder().state(trickState).build());
             gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
             probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+            probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
             // dealer plays 1st trick
             gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(greenCard).build());
@@ -549,6 +564,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(trickState).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // dealer plays trick
         gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(greenCard).build());
@@ -624,6 +640,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(trickState).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // dealer plays trick
         gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(greenCard).build());
@@ -700,6 +717,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(trickState).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // dealer plays trick
         gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(greenCard).build());
@@ -765,6 +783,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(trickState).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // dealer plays trick
         gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(greenCard).build());
@@ -816,6 +835,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(finishedPhase).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // end game
         gameRoom.tell(GameCommand.EndGame.builder().playerId(dealer).build());
@@ -851,6 +871,7 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.Store.builder().state(finishedPhase).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
         probe.expectMessageClass(GameEvent.ConnectionEstablished.class);
+        probe.expectMessageClass(GameEvent.GameSnapshot.class);
 
         // replay game
         gameRoom.tell(GameCommand.ReplayGame.builder().playerId(dealer).build());

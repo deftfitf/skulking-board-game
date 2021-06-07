@@ -233,12 +233,6 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class BulkEvent implements GameEvent {
-        List<GameEvent> gameEventList;
-    }
-
-    @Value
-    @Builder
     class GameFinished implements GameEvent {
         @NonNull PlayerId gameWinnerId;
         @NonNull ScoreBoard scoreBoard;

@@ -13,13 +13,9 @@ application {
     applicationDefaultJvmArgs = listOf("-Dconfig.resource=local1.conf")
 }
 
-akkaGrpc {
-    generateClient = true
-    generateServer = true
-}
-
 dependencies {
     implementation(project(":libs:gamedomain"))
+    implementation(project(":libs:gamegrpc"))
 
     implementation(platform("com.typesafe.akka:akka-bom_$ScalaBinary:2.6.14"))
     implementation("com.typesafe.akka:akka-persistence-typed_$ScalaBinary")

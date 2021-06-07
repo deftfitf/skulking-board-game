@@ -128,17 +128,17 @@ public class GameRoomActor
 
         return Effect()
                 .persist(events)
-                .thenRun(() -> {
+                .thenRun(newState -> {
                     addConnection(init.getFirstDealerId(), init.getFirstDealerRef());
-
                     events.forEach(this::broadcast);
                 });
     }
 
     private Effect<GameEvent, GameState> onNewConnection(GameState state, GameCommand.NewConnection connection) {
         return Effect().none()
-                .thenRun(() -> {
+                .thenRun(newState -> {
                     addConnection(connection.getPlayerId(), connection.getPlayerRef());
+                    narrowcast(connection.getPlayerId(), GameEvent.GameSnapshot.builder().gameState(newState).build());
                 });
     }
 
@@ -198,9 +198,9 @@ public class GameRoomActor
 
             return Effect()
                     .persist(joined)
-                    .thenRun(() -> {
+                    .thenRun(newState -> {
                         addConnection(join.getPlayerId(), join.getPlayerRef());
-
+                        narrowcast(joined.getPlayerId(), GameEvent.GameSnapshot.builder().gameState(newState).build());
                         broadcast(joined);
                     });
 

@@ -14,4 +14,7 @@ include("app:gameserver")
 include("app:websocketserver")
 include("libs")
 
+include("libs:gamedomain")
+include("libs:gamegrpc")
+include("libs:gameserverclient")
 include("libs:zaifapiclient")

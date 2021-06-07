@@ -1,12 +1,13 @@
 package gameserver.domain;
 
+import akka.serialization.jackson.CborSerializable;
 import lombok.Value;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public interface Card {
+public interface Card extends CborSerializable {
     CardId getCardId();
 
     boolean battle(Card next);
