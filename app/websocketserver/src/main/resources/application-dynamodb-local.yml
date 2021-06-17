@@ -1,0 +1,4 @@
+websocketserver:
+  amazon.dynamodb:
+    region: local
+    endpoint: http://localhost:8000

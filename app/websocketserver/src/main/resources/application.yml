@@ -1,0 +1,12 @@
+# 外部化された構成
+# application-{profile}.properties
+
+spring.profiles:
+  group:
+    local:
+      - common
+      - dynamodb-local
+    release:
+      - common
+      - dynamodb-release
+  default: local

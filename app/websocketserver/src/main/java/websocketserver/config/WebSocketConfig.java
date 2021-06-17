@@ -1,24 +1,27 @@
 package websocketserver.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.reactive.HandlerMapping;
+import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
+import org.springframework.web.reactive.socket.WebSocketHandler;
+import websocketserver.handler.WebSocketEndpointHandler;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
-@EnableWebSocketMessageBroker
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+public class WebSocketConfig {
+    
+    @Bean
+    public HandlerMapping handlerMapping(
+            WebSocketEndpointHandler webSocketEndpointHandler
+    ) {
+        Map<String, WebSocketHandler> map = new HashMap<>();
+        map.put("/gameserver", webSocketEndpointHandler);
+        int order = -1; // before annotated controllers
 
-    @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/gs-guide-websocket").withSockJS();
-    }
-
-    @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic");
-        registry.setApplicationDestinationPrefixes("/app");
+        return new SimpleUrlHandlerMapping(map, order);
     }
 
 }
