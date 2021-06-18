@@ -18,6 +18,7 @@ public class GamePlayerReactiveUserDetailsService implements ReactiveUserDetails
     public Mono<UserDetails> findByUsername(String username) {
         return Mono.fromSupplier(() -> gamePlayerRepository.findById(username))
                 .map(gamePlayerOpt -> (UserDetails) gamePlayerOpt
+                        // TODO: error handling, when not found user, return status code 401
                         .orElseThrow(() -> new IllegalArgumentException("The specified user was not found")))
                 .subscribeOn(Schedulers.single());
     }

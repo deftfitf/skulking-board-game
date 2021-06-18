@@ -54,6 +54,14 @@ public class WebSocketEndpointHandlerTest {
     }
 
     @Test
+    public void canDisplayTopPage() {
+        client.get()
+                .uri("/")
+                .exchange()
+                .expectStatus().is2xxSuccessful();
+    }
+
+    @Test
     public void canRegisterNewPlayer() {
         final var request = new GamePlayerController.UserRegisterRequest(
                 "player1",
@@ -74,7 +82,7 @@ public class WebSocketEndpointHandlerTest {
     }
 
     @Test
-    public void canLoginPlayer() {
+    public void canLoginAndLogoutPlayer() {
         final var request = new GamePlayerController.UserRegisterRequest(
                 "player1",
                 "password"
@@ -92,9 +100,9 @@ public class WebSocketEndpointHandlerTest {
 
         assertThat(response.getPlayerId()).isEqualTo(response.getPlayerId());
 
-        final var loginSuccessful = client.mutateWith(csrf())
+        final var loginSuccessful = client
                 .post()
-                .uri("/players/login")
+                .uri("/login")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(BodyInserters.fromFormData(new MultiValueMapAdapter<>(Map.of(
                         "username", List.of(response.getPlayerId()),
@@ -108,13 +116,35 @@ public class WebSocketEndpointHandlerTest {
         final var session = loginSuccessful
                 .getResponseCookies()
                 .getFirst("SESSION");
+        final var csrf = loginSuccessful
+                .getResponseCookies()
+                .getFirst("XSRF-TOKEN");
+
+        final var getMyPage = client
+                .get()
+                .uri("/players/mypage")
+                .cookies(cookies -> {
+                    cookies.add("SESSION", session.getValue());
+                    cookies.add("XSRF-TOKEN", csrf.getValue());
+                })
+                .exchange()
+                .expectStatus().is2xxSuccessful()
+                .returnResult(Void.class);
+
+        client
+                .post()
+                .uri("/logout")
+                .cookies(cookies -> cookies.add("SESSION", session.getValue()))
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().valueEquals("Location", "/");
 
         client.mutateWith(csrf())
                 .get()
                 .uri("/players/mypage")
                 .cookies(cookies -> cookies.add("SESSION", session.getValue()))
                 .exchange()
-                .expectStatus().is2xxSuccessful();
+                .expectStatus().is4xxClientError();
     }
 
     @WithMockUser(roles = "PLAYER")

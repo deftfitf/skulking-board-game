@@ -33,14 +33,6 @@ public class GamePlayerController {
         return new UserRegisterResponse(createdPlayer.getUsername());
     }
 
-    @PostMapping("/login")
-    public void login() {
-    }
-
-    @PostMapping("/logout")
-    public void logout() {
-    }
-
     @GetMapping("/mypage")
     public String mypage(Model model) {
         return "players/mypage";

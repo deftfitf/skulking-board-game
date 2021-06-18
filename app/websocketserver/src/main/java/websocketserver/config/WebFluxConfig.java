@@ -19,7 +19,7 @@ public class WebFluxConfig implements WebFluxConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/static/**")
-                .addResourceLocations("classpath:/static")
+                .addResourceLocations("classpath:/react/static/")
                 .setCacheControl(CacheControl.maxAge(7, TimeUnit.DAYS));
     }
 
