@@ -11,9 +11,12 @@ import akka.cluster.sharding.typed.javadsl.Entity;
 import akka.cluster.sharding.typed.javadsl.EntityTypeKey;
 import akka.japi.function.Procedure;
 import akka.persistence.typed.PersistenceId;
+import akka.persistence.typed.RecoveryCompleted;
 import akka.persistence.typed.SnapshotSelectionCriteria;
 import akka.persistence.typed.javadsl.*;
+import dynamodbdao.GameRoomDynamoDBDao;
 import gameserver.domain.*;
+import gameserver.query.GameRoomQueryAdapter;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -31,10 +34,12 @@ public class GameRoomActor
             EntityTypeKey.create(GameCommand.class, "GameRoomActorCommand");
 
     private final ActorContext<GameCommand> context;
+    private final GameRoomDynamoDBDao gameRoomDynamoDBDao;
     private final String gameRoomId;
 
     private GameRoomActor(
-            ActorContext<GameCommand> context, String gameRoomId
+            ActorContext<GameCommand> context, String gameRoomId,
+            GameRoomDynamoDBDao gameRoomDynamoDBDao
     ) {
         super(
                 PersistenceId.of(ENTITY_TYPE_KEY.name(), gameRoomId),
@@ -42,19 +47,36 @@ public class GameRoomActor
                         .restartWithBackoff(Duration.ofMillis(200), Duration.ofSeconds(5), 0.1));
         this.gameRoomId = gameRoomId;
         this.context = context;
+        this.gameRoomDynamoDBDao = gameRoomDynamoDBDao;
     }
 
-    public static void init(ActorSystem<?> system) {
+    public static void init(ActorSystem<?> system, GameRoomDynamoDBDao dao) {
         ClusterSharding.get(system)
-                .init(
-                        Entity.of(
-                                ENTITY_TYPE_KEY,
-                                entityContext -> GameRoomActor.create(entityContext.getEntityId())));
+                .init(Entity.of(
+                        ENTITY_TYPE_KEY,
+                        entityContext -> GameRoomActor.create(entityContext.getEntityId(), dao)));
     }
 
-    public static Behavior<GameCommand> create(String gameRoomId) {
+    @Override
+    public SignalHandler<GameState> signalHandler() {
+        return newSignalHandlerBuilder()
+                .onSignal(RecoveryCompleted.class, (state, sig) -> {
+                    if (state == null) {
+                        return;
+                    }
+
+                    final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, state);
+                    gameRoomDynamoDBDao.updateRoom(gameRoom);
+                })
+                .build();
+    }
+
+    public static Behavior<GameCommand> create(String gameRoomId, GameRoomDynamoDBDao dao) {
         return Behaviors.setup(ctx -> EventSourcedBehavior
-                .start(new GameRoomActor(ctx, gameRoomId), ctx));
+                .start(
+                        Behaviors.supervise(new GameRoomActor(ctx, gameRoomId, dao))
+                                .onFailure(SupervisorStrategy.restart()),
+                        ctx));
     }
 
     private void narrowcast(PlayerId playerId, GameEvent gameEvent) {
@@ -130,6 +152,10 @@ public class GameRoomActor
                 .persist(events)
                 .thenRun(newState -> {
                     addConnection(init.getFirstDealerId(), init.getFirstDealerRef());
+
+                    final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, newState);
+                    gameRoomDynamoDBDao.putNewRoom(gameRoom);
+
                     events.forEach(this::broadcast);
                 });
     }
@@ -200,6 +226,10 @@ public class GameRoomActor
                     .persist(joined)
                     .thenRun(newState -> {
                         addConnection(join.getPlayerId(), join.getPlayerRef());
+
+                        final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, newState);
+                        gameRoomDynamoDBDao.updateRoom(gameRoom);
+
                         narrowcast(joined.getPlayerId(), GameEvent.GameSnapshot.builder().gameState(newState).build());
                         broadcast(joined);
                     });
@@ -220,6 +250,9 @@ public class GameRoomActor
                     .build();
 
             final Procedure<GameState> effect = leftState -> {
+                final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, leftState);
+                gameRoomDynamoDBDao.updateRoom(gameRoom);
+
                 final var newDealerId = ((GameState.StartPhase) leftState).getDealerId();
                 if (newDealerId.equals(oldDealerId)) {
                     broadcast(left);
@@ -270,6 +303,9 @@ public class GameRoomActor
             return Effect()
                     .persist(gameStarted)
                     .thenRun(newState -> {
+                        final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, newState);
+                        gameRoomDynamoDBDao.updateRoom(gameRoom);
+
                         broadcast(gameStarted);
                         newState.getEventQueue().forEach(this::broadcast);
                     });
@@ -311,7 +347,14 @@ public class GameRoomActor
 
             return Effect()
                     .persist(played)
-                    .thenRun(newState -> newState.getEventQueue().forEach(this::broadcast));
+                    .thenRun(newState -> {
+                        if (newState.getStateName() == GameStateType.GAME_FINISHED) {
+                            final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, newState);
+                            gameRoomDynamoDBDao.updateRoom(gameRoom);
+                        }
+
+                        newState.getEventQueue().forEach(this::broadcast);
+                    });
         } else if (canPlayCard instanceof InputCheckResult.InvalidInput) {
             return whenInvalidInput((InputCheckResult.InvalidInput) canPlayCard, playCard.getPlayerId());
         }
@@ -422,7 +465,11 @@ public class GameRoomActor
         final var gameEnded = GameEvent.GameEnded.builder().build();
         return Effect()
                 .persist(gameEnded)
-                .thenRun(() -> broadcast(gameEnded))
+                .thenRun(() -> {
+                    gameRoomDynamoDBDao.deleteRoom(gameRoomId);
+
+                    broadcast(gameEnded);
+                })
                 .thenStop();
     }
 

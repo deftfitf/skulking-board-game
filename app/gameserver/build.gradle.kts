@@ -14,6 +14,7 @@ application {
 }
 
 dependencies {
+    implementation(project(":libs:dynamodbdao"))
     implementation(project(":libs:gamedomain"))
     implementation(project(":libs:gamegrpc"))
 
@@ -34,6 +35,7 @@ dependencies {
 
     implementation("ch.qos.logback:logback-classic:1.2.3")
 
+    testImplementation("org.mockito:mockito-core:3.6.0")
     testImplementation("com.typesafe.akka:akka-persistence-testkit_$ScalaBinary")
     testImplementation("com.typesafe.akka:akka-actor-testkit-typed_$ScalaBinary")
 }

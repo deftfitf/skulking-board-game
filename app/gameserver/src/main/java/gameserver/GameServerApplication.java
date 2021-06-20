@@ -35,7 +35,14 @@ public class GameServerApplication {
         AkkaManagement.get(system).start();
         ClusterBootstrap.get(system).start();
 
-        GameRoomActor.init(system);
+        // TODO: dynamodb daoの初期化コード記述,
+        //       Query側のコントローラ記述
+        //       Frontendのルームリスト表示
+        //       GameBoard実装
+        //       etc...
+        final var gameRoomDynamoDBDao = createGameRoomDynamoDBDao();
+
+        GameRoomActor.init(system, null);
 
         final var cardAdapter = new CardAdapter();
         final var gameRuleAdapter = new GameRuleAdapter();
@@ -57,5 +64,9 @@ public class GameServerApplication {
                 System.out.println("gRPC server bound to: " + binding.localAddress())
         );
     }
+
+//    private GameRoomDynamoDBDao createGameRoomDynamoDBDao() {
+//
+//    }
 
 }

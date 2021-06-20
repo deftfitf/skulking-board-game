@@ -2,58 +2,75 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
-import {Box, Grid, makeStyles, Paper} from "@material-ui/core";
+import {Button, Container, makeStyles, Typography} from "@material-ui/core";
+import AppTopBar from "./components/AppTopBar";
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    flexGrow: 1,
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    [theme.breakpoints.up('sm')]: {
+      height: '80vh',
+      minHeight: 500,
+      maxHeight: 1300,
+    },
+  },
+  container: {
+    marginTop: theme.spacing(3),
+    marginBottom: theme.spacing(14),
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   paper: {
     padding: theme.spacing(1),
     textAlign: 'center',
     color: theme.palette.text.secondary,
   },
+  button: {
+    minWidth: 200,
+  },
+  h5: {
+    marginBottom: theme.spacing(4),
+    marginTop: theme.spacing(4),
+    [theme.breakpoints.up('sm')]: {
+      marginTop: theme.spacing(10),
+    },
+  },
+  more: {
+    marginTop: theme.spacing(2),
+  },
 }));
 
-const Demo = () => {
+const TopPage = () => {
   const classes = useStyles();
 
-  const FormRow = () => {
-    return (
-    <React.Fragment>
-      <Grid item xs={4}>
-        <Paper className={classes.paper}>item</Paper>
-      </Grid>
-      <Grid item xs={4}>
-        <Paper className={classes.paper}>item</Paper>
-      </Grid>
-      <Grid item xs={4}>
-        <Paper className={classes.paper}>item</Paper>
-      </Grid>
-    </React.Fragment>
-    );
-  }
-
   return (
-  <Box className={classes.root}>
-    <Grid container spacing={1}>
-      <Grid container item xs={12} spacing={3}>
-        <FormRow/>
-      </Grid>
-      <Grid container item xs={12} spacing={3}>
-        <FormRow/>
-      </Grid>
-      <Grid container item xs={12} spacing={3}>
-        <FormRow/>
-      </Grid>
-    </Grid>
-  </Box>
-  );
+  <section className={classes.root}>
+    <Container className={classes.container}>
+      <Typography color="inherit" align="center" variant="h2">
+        SKULKING ONLINE
+      </Typography>
+      <Button
+      color="secondary"
+      variant="contained"
+      size="large"
+      className={classes.button}
+      component="a"
+      href="/register"
+      >
+        新規登録
+      </Button>
+    </Container>
+  </section>
+  )
 }
 
 ReactDOM.render(
 <React.StrictMode>
-  <Demo/>
+  <AppTopBar auth={false} user={{username: "ishida", icon: "https://material-ui.com/static/images/avatar/1.jpg"}}/>
+  <TopPage/>
 </React.StrictMode>,
 document.getElementById('root')
 );

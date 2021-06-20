@@ -3,18 +3,31 @@ package gameserver.actor;
 import akka.actor.testkit.typed.javadsl.TestKitJunitResource;
 import akka.actor.testkit.typed.javadsl.TestProbe;
 import akka.actor.typed.ActorRef;
+import dynamodbdao.GameRoomDynamoDBDao;
 import gameserver.domain.*;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class GameRoomActorTest {
+
+    @Rule
+    public MockitoRule rule = MockitoJUnit.rule();
+    @Mock
+    private GameRoomDynamoDBDao dao;
 
     @ClassRule
     public static final TestKitJunitResource testKit = new TestKitJunitResource(
@@ -33,7 +46,7 @@ public class GameRoomActorTest {
 
     @Test
     public void initialize() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -65,13 +78,15 @@ public class GameRoomActorTest {
         assertThat(joined)
                 .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.APlayerJoined.class))
                 .isEqualTo(expected);
+
+        verify(dao, times(1)).putNewRoom(any());
     }
 
     ///////////////////////////// START PHASE /////////////////////////////
 
     @Test
     public void tooManyParticipantsAndAlreadyJoinedOnStartPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> dealerProbe = testKit.createTestProbe();
         final TestProbe<GameEvent> participantProbe = testKit.createTestProbe();
         final TestProbe<GameEvent> participant2Probe = testKit.createTestProbe();
@@ -119,7 +134,7 @@ public class GameRoomActorTest {
 
     @Test
     public void cantLeavePlayerNotExistsOnStartPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -142,7 +157,7 @@ public class GameRoomActorTest {
 
     @Test
     public void playerCanParticipantAndLeaveOnStartPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
         final TestProbe<GameEvent> participantProbe = testKit.createTestProbe();
 
@@ -174,11 +189,13 @@ public class GameRoomActorTest {
                 .satisfies(e -> assertThat(e.getPlayerId()).isEqualTo(participant));
 
         participantProbe.expectMessage(GameEvent.ConnectionClosed.builder().playerId(participant).build());
+
+        verify(dao, times(2)).updateRoom(any());
     }
 
     @Test
     public void changeDealerOnStartPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -216,7 +233,7 @@ public class GameRoomActorTest {
 
     @Test
     public void notEnoughPeopleAtTheStartOnStartPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -242,7 +259,7 @@ public class GameRoomActorTest {
 
     @Test
     public void canStartOnStartPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
         final TestProbe<GameEvent> participantProbe = testKit.createTestProbe();
 
@@ -290,7 +307,7 @@ public class GameRoomActorTest {
 
     @Test
     public void canBidDeclareAndStartTrickPhaseOnBiddingPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
         final TestProbe<GameEvent> participantProbe = testKit.createTestProbe();
 
@@ -299,7 +316,7 @@ public class GameRoomActorTest {
 
         final var gameRule = new GameRule(5, 3, GameRule.DeckType.STANDARD);
         final var playerIds = new ArrayList<>(List.of(dealer, participant));
-        final var state = GameState.BiddingPhase.newGame(gameRule, dealer, playerIds);
+        final var state = GameState.BiddingPhase.newGame(dealer, gameRule, dealer, playerIds);
 
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
@@ -340,7 +357,7 @@ public class GameRoomActorTest {
 
     @Test
     public void bidDeclaredPlayerNotParticipantOrInvalidBidValueOnBiddingPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -348,7 +365,7 @@ public class GameRoomActorTest {
 
         final var gameRule = new GameRule(5, 3, GameRule.DeckType.STANDARD);
         final var playerIds = new ArrayList<>(List.of(dealer, participant));
-        final var state = GameState.BiddingPhase.newGame(gameRule, dealer, playerIds);
+        final var state = GameState.BiddingPhase.newGame(dealer, gameRule, dealer, playerIds);
 
         gameRoom.tell(GameCommand.Store.builder().state(state).build());
         gameRoom.tell(GameCommand.NewConnection.builder().playerId(dealer).playerRef(probe.getRef()).build());
@@ -380,7 +397,7 @@ public class GameRoomActorTest {
     @Test
     public void canPlayCardOnTrickPhase() {
         Arrays.stream(GameRule.DeckType.values()).forEach(rule -> {
-            final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+            final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
             final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
             final var dealer = new PlayerId("dealer");
@@ -388,7 +405,7 @@ public class GameRoomActorTest {
 
             final var gameRule = new GameRule(5, 3, rule);
             final var playerIds = new ArrayList<>(List.of(dealer, participant));
-            final var state = GameState.BiddingPhase.newGame(gameRule, dealer, playerIds);
+            final var state = GameState.BiddingPhase.newGame(dealer, gameRule, dealer, playerIds);
             state.bid(dealer, 0);
             state.bid(participant, 1);
             final var trickState = state.startTrick();
@@ -433,7 +450,7 @@ public class GameRoomActorTest {
     @Test
     public void canPlayCardAndFinishGameOnTrickPhaseLastRound() {
         Arrays.stream(GameRule.DeckType.values()).forEach(rule -> {
-            final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+            final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
             final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
             final var dealer = new PlayerId("dealer");
@@ -445,7 +462,7 @@ public class GameRoomActorTest {
             scoreBoard.addRoundScore(Map.of(dealer, new Score(-10, 0), participant, new Score(-10, 0)));
             scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
             final var state =
-                    GameState.BiddingPhase.startRound(3, gameRule, dealer, playerIds, scoreBoard);
+                    GameState.BiddingPhase.startRound(dealer, 3, gameRule, dealer, playerIds, scoreBoard);
             state.bid(dealer, 0);
             state.bid(participant, 2);
             final var trickState = state.startTrick();
@@ -523,6 +540,8 @@ public class GameRoomActorTest {
             assertThat(resultScoreBoard.getLastRoundScore())
                     .isEqualTo(scoreBoard.getLastRoundScore());
         });
+
+        verify(dao, times(2)).updateRoom(any());
     }
 
     // TODO: add exceptional cases
@@ -531,7 +550,7 @@ public class GameRoomActorTest {
 
     @Test
     public void transitionFromTrickPhaseToNextTrickLeadPlayerChanging() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -543,7 +562,7 @@ public class GameRoomActorTest {
         scoreBoard.addRoundScore(Map.of(dealer, new Score(-10, 0), participant, new Score(-10, 0)));
         scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
         final var state =
-                GameState.BiddingPhase.startRound(3, gameRule, dealer, playerIds, scoreBoard);
+                GameState.BiddingPhase.startRound(dealer, 3, gameRule, dealer, playerIds, scoreBoard);
         state.bid(dealer, 0);
         state.bid(participant, 2);
         final var trickState = state.startTrick();
@@ -604,7 +623,7 @@ public class GameRoomActorTest {
 
     @Test
     public void transitionFromTrickPhaseToPlayerHandChanging() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -616,7 +635,7 @@ public class GameRoomActorTest {
         scoreBoard.addRoundScore(Map.of(dealer, new Score(-10, 0), participant, new Score(-10, 0)));
         scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
         final var state =
-                GameState.BiddingPhase.startRound(3, gameRule, dealer, playerIds, scoreBoard);
+                GameState.BiddingPhase.startRound(dealer, 3, gameRule, dealer, playerIds, scoreBoard);
         state.bid(dealer, 0);
         state.bid(participant, 2);
         state.getDeck().clear();
@@ -684,7 +703,7 @@ public class GameRoomActorTest {
 
     @Test
     public void transitionFromTrickPhaseToBidDeclareChanging() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -696,7 +715,7 @@ public class GameRoomActorTest {
         scoreBoard.addRoundScore(Map.of(dealer, new Score(-10, 0), participant, new Score(-10, 0)));
         scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
         final var state =
-                GameState.BiddingPhase.startRound(3, gameRule, dealer, playerIds, scoreBoard);
+                GameState.BiddingPhase.startRound(dealer, 3, gameRule, dealer, playerIds, scoreBoard);
         state.bid(dealer, 0);
         state.bid(participant, 2);
         final var trickState = state.startTrick();
@@ -747,7 +766,7 @@ public class GameRoomActorTest {
 
     @Test
     public void transitionFromTrickPhaseToFuturePredicating() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -759,7 +778,7 @@ public class GameRoomActorTest {
         scoreBoard.addRoundScore(Map.of(dealer, new Score(-10, 0), participant, new Score(-10, 0)));
         scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
         final var state =
-                GameState.BiddingPhase.startRound(3, gameRule, dealer, playerIds, scoreBoard);
+                GameState.BiddingPhase.startRound(dealer, 3, gameRule, dealer, playerIds, scoreBoard);
         state.bid(dealer, 0);
         state.bid(participant, 2);
         final var currentDeck = new LinkedList<>(List.of(new Card.Skulking(new CardId("sk")), new Card.StandardEscape(new CardId("es"))));
@@ -813,7 +832,7 @@ public class GameRoomActorTest {
 
     @Test
     public void canEndGameOnFinishedPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -826,6 +845,7 @@ public class GameRoomActorTest {
         scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
         scoreBoard.addRoundScore(Map.of(dealer, new Score(40, 0), participant, new Score(60, 0)));
         final var finishedPhase = GameState.FinishedPhase.builder()
+                .roomOwnerId(dealer)
                 .rule(gameRule)
                 .lastWinnerId(participant)
                 .playerIds(playerIds)
@@ -849,7 +869,7 @@ public class GameRoomActorTest {
 
     @Test
     public void canReplayGameOnFinishedPhase() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId()));
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -862,6 +882,7 @@ public class GameRoomActorTest {
         scoreBoard.addRoundScore(Map.of(dealer, new Score(20, 0), participant, new Score(-20, 0)));
         scoreBoard.addRoundScore(Map.of(dealer, new Score(40, 0), participant, new Score(60, 0)));
         final var finishedPhase = GameState.FinishedPhase.builder()
+                .roomOwnerId(dealer)
                 .rule(gameRule)
                 .lastWinnerId(dealer)
                 .playerIds(playerIds)

@@ -13,6 +13,7 @@ include("app:gameserver")
 include("app:websocketserver")
 include("libs")
 
+include("libs:dynamodbdao")
 include("libs:gamedomain")
 include("libs:gamegrpc")
 include("libs:gameserverclient")

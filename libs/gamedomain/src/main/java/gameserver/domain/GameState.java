@@ -11,6 +11,12 @@ import java.util.stream.Collectors;
 
 public interface GameState extends CborSerializable {
 
+    PlayerId getRoomOwnerId();
+
+    GameStateType getStateName();
+
+    List<PlayerId> getPlayerIds();
+
     List<GameEvent> getEventQueue();
 
     @Data
@@ -23,6 +29,16 @@ public interface GameState extends CborSerializable {
 
         @Builder.Default
         @NonNull List<GameEvent> eventQueue = new ArrayList<>();
+
+        @Override
+        public PlayerId getRoomOwnerId() {
+            return dealerId;
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.START_PHASE;
+        }
 
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
@@ -71,7 +87,7 @@ public interface GameState extends CborSerializable {
         }
 
         public BiddingPhase startBidding() {
-            return BiddingPhase.newGame(rule, dealerId, playerIds);
+            return BiddingPhase.newGame(dealerId, rule, dealerId, playerIds);
         }
 
         public static StartPhase empty(GameRule gameRule, PlayerId playerId) {
@@ -89,6 +105,7 @@ public interface GameState extends CborSerializable {
     @Data
     @Builder
     public class BiddingPhase implements GameState {
+        @NonNull PlayerId roomOwnerId;
         @NonNull GameRule rule;
 
         @NonNull List<PlayerId> playerIds;
@@ -101,12 +118,13 @@ public interface GameState extends CborSerializable {
         @Builder.Default
         @NonNull List<GameEvent> eventQueue = new ArrayList<>();
 
-        public List<GameEvent> getEventQueue() {
-            return List.copyOf(eventQueue);
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_PLAYING;
         }
 
-        public List<GameEvent> clearEventQueue() {
-            return eventQueue = new ArrayList<>();
+        public List<GameEvent> getEventQueue() {
+            return List.copyOf(eventQueue);
         }
 
         public void addGameEvent(GameEvent event) {
@@ -137,13 +155,13 @@ public interface GameState extends CborSerializable {
         }
 
         public static BiddingPhase newGame(
-                GameRule rule, PlayerId dealerId, List<PlayerId> playerIds
+                PlayerId roomOwnerId, GameRule rule, PlayerId dealerId, List<PlayerId> playerIds
         ) {
-            return startRound(1, rule, dealerId, playerIds, ScoreBoard.empty());
+            return startRound(roomOwnerId, 1, rule, dealerId, playerIds, ScoreBoard.empty());
         }
 
         public static BiddingPhase startRound(
-                int round, GameRule rule, PlayerId dealerId,
+                PlayerId roomOwnerId, int round, GameRule rule, PlayerId dealerId,
                 List<PlayerId> playerIds, ScoreBoard scoreBoard
         ) {
             final var deck = rule.provideNewDeck();
@@ -165,6 +183,7 @@ public interface GameState extends CborSerializable {
 
             return BiddingPhase
                     .builder()
+                    .roomOwnerId(roomOwnerId)
                     .rule(rule)
                     .deck(deck)
                     .dealerId(dealerId)
@@ -183,6 +202,7 @@ public interface GameState extends CborSerializable {
             TrickPhase.rotatePlayers(dealerId, players);
 
             return TrickPhase.builder()
+                    .roomOwnerId(roomOwnerId)
                     .rule(rule)
                     .round(round)
                     .dealerId(dealerId)
@@ -198,6 +218,7 @@ public interface GameState extends CborSerializable {
     @Data
     @Builder
     class TrickPhase implements GameState {
+        @NonNull PlayerId roomOwnerId;
         @NonNull GameRule rule;
         int round;
         @NonNull PlayerId dealerId;
@@ -219,6 +240,11 @@ public interface GameState extends CborSerializable {
 
         @Builder.Default
         @NonNull List<GameEvent> eventQueue = new ArrayList<>();
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_PLAYING;
+        }
 
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
@@ -494,6 +520,7 @@ public interface GameState extends CborSerializable {
 
         public FinishedPhase finish() {
             return FinishedPhase.builder()
+                    .roomOwnerId(roomOwnerId)
                     .rule(rule)
                     .lastWinnerId(dealerId)
                     .playerIds(playerIds)
@@ -569,7 +596,7 @@ public interface GameState extends CborSerializable {
         }
 
         public BiddingPhase nextBiddingPhase() {
-            return BiddingPhase.startRound(round + 1, rule, dealerId, playerIds, scoreBoard);
+            return BiddingPhase.startRound(roomOwnerId, round + 1, rule, dealerId, playerIds, scoreBoard);
         }
 
     }
@@ -583,6 +610,21 @@ public interface GameState extends CborSerializable {
 
         @Builder.Default
         @NonNull List<GameEvent> eventQueue = new ArrayList<>();
+
+        @Override
+        public PlayerId getRoomOwnerId() {
+            return trickPhase.getRoomOwnerId();
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_PLAYING;
+        }
+
+        @Override
+        public List<PlayerId> getPlayerIds() {
+            return trickPhase.getPlayerIds();
+        }
 
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
@@ -613,6 +655,21 @@ public interface GameState extends CborSerializable {
         @NonNull List<CardId> drawCardIds;
         @NonNull GameState.TrickPhase.APlayerWon aPlayerWon;
         @NonNull List<GameEvent> eventQueue;
+
+        @Override
+        public PlayerId getRoomOwnerId() {
+            return trickPhase.getRoomOwnerId();
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_PLAYING;
+        }
+
+        @Override
+        public List<PlayerId> getPlayerIds() {
+            return trickPhase.getPlayerIds();
+        }
 
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
@@ -646,6 +703,21 @@ public interface GameState extends CborSerializable {
         @NonNull GameState.TrickPhase.APlayerWon aPlayerWon;
         @NonNull List<GameEvent> eventQueue;
 
+        @Override
+        public PlayerId getRoomOwnerId() {
+            return trickPhase.getRoomOwnerId();
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_PLAYING;
+        }
+
+        @Override
+        public List<PlayerId> getPlayerIds() {
+            return trickPhase.getPlayerIds();
+        }
+
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
         }
@@ -659,6 +731,21 @@ public interface GameState extends CborSerializable {
         @NonNull PlayerId changingPlayerId;
         @NonNull GameState.TrickPhase.APlayerWon aPlayerWon;
         @NonNull List<GameEvent> eventQueue;
+
+        @Override
+        public PlayerId getRoomOwnerId() {
+            return trickPhase.getRoomOwnerId();
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_PLAYING;
+        }
+
+        @Override
+        public List<PlayerId> getPlayerIds() {
+            return trickPhase.getPlayerIds();
+        }
 
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
@@ -694,6 +781,7 @@ public interface GameState extends CborSerializable {
     @Value
     @Builder
     public class FinishedPhase implements GameState {
+        @NonNull PlayerId roomOwnerId;
         @NonNull GameRule rule;
 
         @NonNull PlayerId lastWinnerId;
@@ -705,6 +793,11 @@ public interface GameState extends CborSerializable {
 
         public List<GameEvent> getEventQueue() {
             return List.copyOf(eventQueue);
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return GameStateType.GAME_FINISHED;
         }
 
         public void addGameEvent(GameEvent event) {
@@ -733,7 +826,7 @@ public interface GameState extends CborSerializable {
         }
 
         public BiddingPhase replayGame() {
-            return BiddingPhase.newGame(rule, lastWinnerId, playerIds);
+            return BiddingPhase.newGame(roomOwnerId, rule, lastWinnerId, playerIds);
         }
 
     }
