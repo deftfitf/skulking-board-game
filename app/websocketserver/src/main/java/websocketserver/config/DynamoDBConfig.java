@@ -3,6 +3,7 @@ package websocketserver.config;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import dynamodbdao.GameRoomDynamoDBDao;
 import lombok.extern.slf4j.Slf4j;
 import org.socialsignin.spring.data.dynamodb.repository.config.EnableDynamoDBRepositories;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -38,6 +39,17 @@ public class DynamoDBConfig {
         return AmazonDynamoDBClientBuilder.standard()
                 .withEndpointConfiguration(endpointConfiguration)
                 .build();
+    }
+
+    @Bean
+    public GameRoomDynamoDBDao gameRoomDynamoDBDao(
+            DynamoDBSetting dynamoDBSetting
+    ) {
+        return new GameRoomDynamoDBDao(
+                dynamoDBSetting.getEndpoint(),
+                dynamoDBSetting.getAccessKeyId(),
+                dynamoDBSetting.getAccessKeySecret(),
+                dynamoDBSetting.getGameRoomTable().getTableName());
     }
 
 }

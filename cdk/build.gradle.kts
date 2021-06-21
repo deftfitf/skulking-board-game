@@ -12,6 +12,8 @@ application {
 dependencies {
     implementation("org.projectlombok:lombok:1.18.16")
     annotationProcessor("org.projectlombok:lombok:1.18.16")
+    testImplementation("org.projectlombok:lombok:1.18.16")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.16")
 
     implementation("software.amazon.awscdk:core:${awsCdkVersion}")
 //    implementation "software.amazon.awscdk:apigateway:${awsCdkVersion}"

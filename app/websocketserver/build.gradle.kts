@@ -12,6 +12,7 @@ version = "0.0.1-SNAPSHOT"
 dependencies {
     implementation(project(":libs:gamedomain"))
     implementation(project(":libs:gamegrpc"))
+    implementation(project(":libs:dynamodbdao"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-security")

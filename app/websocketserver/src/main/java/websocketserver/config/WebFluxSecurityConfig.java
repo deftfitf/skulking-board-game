@@ -68,6 +68,7 @@ public class WebFluxSecurityConfig {
         http.authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/", "/static/**", "/error", "/players/register", "/login", "/logout").permitAll()
                 .pathMatchers("/players/mypage").hasRole(Role.PLAYER.name())
+                .pathMatchers("/gamerooms").hasRole(Role.PLAYER.name())
                 .pathMatchers("/gameserver").hasRole(Role.PLAYER.name())
                 .anyExchange().authenticated())
 

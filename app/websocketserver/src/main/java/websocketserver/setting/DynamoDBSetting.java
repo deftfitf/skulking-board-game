@@ -10,4 +10,13 @@ import org.springframework.context.annotation.Configuration;
 public class DynamoDBSetting {
     private String region;
     private String endpoint;
+    private String accessKeyId;
+    private String accessKeySecret;
+
+    private TableSetting gameRoomTable;
+
+    @Data
+    public static class TableSetting {
+        String tableName;
+    }
 }

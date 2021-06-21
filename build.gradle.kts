@@ -33,7 +33,7 @@ subprojects {
 
     dependencies {
         implementation("org.projectlombok:lombok:1.18.8")
-        annotationProcessor("org.projectlombok:lombok:1.18.20")
+        annotationProcessor("org.projectlombok:lombok:1.18.8")
 
         testImplementation("junit:junit:4.13.1")
         testImplementation("org.assertj:assertj-core:3.19.0")

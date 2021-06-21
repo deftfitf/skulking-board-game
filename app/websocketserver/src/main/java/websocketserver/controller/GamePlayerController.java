@@ -1,6 +1,8 @@
 package websocketserver.controller;
 
-import lombok.*;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
 import org.springframework.validation.annotation.Validated;
@@ -38,19 +40,15 @@ public class GamePlayerController {
         return "players/mypage";
     }
 
-    @Data
+    @Value
     @Validated
-    @NoArgsConstructor
-    @AllArgsConstructor
     public static class UserRegisterRequest {
         @NotNull String playerName;
         @NotNull String playerPassword;
     }
 
-    @Data
+    @Value
     @Validated
-    @NoArgsConstructor
-    @AllArgsConstructor
     public static class UserRegisterResponse {
         @NotNull String playerId;
     }
