@@ -1,9 +1,15 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 import {Button, Container, makeStyles, Typography} from "@material-ui/core";
 import AppTopBar from "./components/AppTopBar";
+import {HashRouter, Route, Switch} from "react-router-dom";
+import GameRoomList from "./pages/GameRoomList";
+import GameRoom from "./pages/GameRoom";
+import SignIn from "./pages/Signin";
+import SignOut from "./pages/Signout";
+import PlayerMyPage from "./pages/PlayerMyPage";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -67,10 +73,59 @@ const TopPage = () => {
   )
 }
 
+const routes = [
+  {
+    path: "/gamerooms/:gameRoomId",
+    component: GameRoom
+  },
+  {
+    path: "/gamerooms/",
+    component: GameRoomList
+  },
+  {
+    path: "/players/mypage",
+    component: PlayerMyPage
+  },
+  {
+    path: "/signin",
+    component: SignIn
+  },
+  {
+    path: "/signout",
+    component: SignOut
+  },
+  {
+    path: "/",
+    component: TopPage
+  },
+];
+
+const App = () => {
+  const [auth, setAuth] = useState();
+
+  useEffect(() => {
+
+    return () => {
+
+    };
+  }, []);
+
+  return (
+  <HashRouter>
+    <AppTopBar auth={false} user={{username: "ishida", icon: "https://material-ui.com/static/images/avatar/1.jpg"}}/>
+
+    <Switch>
+      {routes.map(route => (
+      <Route {...route} />
+      ))}
+    </Switch>
+  </HashRouter>
+  );
+}
+
 ReactDOM.render(
 <React.StrictMode>
-  <AppTopBar auth={false} user={{username: "ishida", icon: "https://material-ui.com/static/images/avatar/1.jpg"}}/>
-  <TopPage/>
+  <App/>
 </React.StrictMode>,
 document.getElementById('root')
 );

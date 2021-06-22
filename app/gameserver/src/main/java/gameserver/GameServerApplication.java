@@ -6,6 +6,8 @@ import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
 import akka.management.cluster.bootstrap.ClusterBootstrap;
 import akka.management.javadsl.AkkaManagement;
+import com.typesafe.config.ConfigFactory;
+import dynamodbdao.GameRoomDynamoDBDao;
 import gameserver.actor.GameRoomActor;
 import gameserver.service.grpc.GameServerServiceHandlerFactory;
 import gameserver.service.impl.*;
@@ -19,11 +21,7 @@ public class GameServerApplication {
     public static void main(String[] args) {
         final ActorSystem<Void> system = ActorSystem.create(Behaviors.empty(), "GameServerSystem");
         try {
-            if (args.length <= 0) {
-                throw new RuntimeException("arguments required");
-            }
-
-            final var serverPort = Integer.parseInt(args[0]);
+            final var serverPort = ConfigFactory.load().getInt("game-server-service.grpc.port");
             init(system, serverPort);
         } catch (Exception e) {
             log.error("Terminating due to initialization failure.", e);
@@ -41,8 +39,7 @@ public class GameServerApplication {
         //       GameBoard実装
         //       etc...
         final var gameRoomDynamoDBDao = createGameRoomDynamoDBDao();
-
-        GameRoomActor.init(system, null);
+        GameRoomActor.init(system, gameRoomDynamoDBDao);
 
         final var cardAdapter = new CardAdapter();
         final var gameRuleAdapter = new GameRuleAdapter();
@@ -65,8 +62,14 @@ public class GameServerApplication {
         );
     }
 
-//    private GameRoomDynamoDBDao createGameRoomDynamoDBDao() {
-//
-//    }
+    private static GameRoomDynamoDBDao createGameRoomDynamoDBDao() {
+        final var dynamodbConfig = ConfigFactory.load().getConfig("dynamodb.gameroom");
+        final var tableName = dynamodbConfig.getString("table-name");
+        final var endpoint = dynamodbConfig.getString("endpoint");
+        final var accessKeyId = dynamodbConfig.getString("access-key-id");
+        final var accessKeySecret = dynamodbConfig.getString("access-key-secret");
+
+        return new GameRoomDynamoDBDao(endpoint, accessKeyId, accessKeySecret, tableName);
+    }
 
 }

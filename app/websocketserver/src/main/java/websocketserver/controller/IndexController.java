@@ -20,4 +20,8 @@ public class IndexController {
     public void logout() {
     }
 
+    @PostMapping("/checkLogin")
+    public void checkLogin() {
+    }
+
 }
