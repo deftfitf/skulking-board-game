@@ -1,5 +1,7 @@
 import React from "react";
 import {Avatar, Box, ClickAwayListener, Grow, makeStyles, MenuItem, MenuList, Paper, Popper} from "@material-ui/core";
+import {Link as RouterLink} from "react-router-dom";
+import {gameServerApiClient} from "../module/axiousConfig";
 
 export interface AvatorUser {
   username: string;
@@ -7,7 +9,8 @@ export interface AvatorUser {
 }
 
 interface AvatorIconProps {
-  user: AvatorUser
+  user: AvatorUser,
+  onLogOut: () => void
 }
 
 const useStyles = makeStyles((theme) => ({
@@ -26,6 +29,14 @@ const LoggedInAvatorIcon = (props: AvatorIconProps) => {
   const handleToggle = () => {
     setOpen((prevOpen) => !prevOpen);
   };
+
+  const onLogOut: <T>(event: React.MouseEvent<T>) => void = (event) => {
+    gameServerApiClient.logout()
+    .then(() => props.onLogOut())
+    .catch(e => console.log(`failed logout ${e}`));
+
+    handleClose(event);
+  }
 
   const handleClose: <T>(event: React.MouseEvent<T>) => void = (event) => {
     if (
@@ -78,8 +89,8 @@ const LoggedInAvatorIcon = (props: AvatorIconProps) => {
         <Paper>
           <ClickAwayListener onClickAway={handleClose}>
             <MenuList autoFocusItem={open} id="menu-list-grow" onKeyDown={handleListKeyDown}>
-              <MenuItem onClick={handleClose}>Account</MenuItem>
-              <MenuItem onClick={handleClose}>Logout</MenuItem>
+              <MenuItem component={RouterLink} to="/players/mypage">Account</MenuItem>
+              <MenuItem onClick={onLogOut}>Logout</MenuItem>
             </MenuList>
           </ClickAwayListener>
         </Paper>

@@ -1,14 +1,13 @@
 import axios, {AxiosError, AxiosInstance} from "axios";
-import {GameRoom, GetGameRoomsRequest, UserRegisterRequest, UserRegisterResponse} from "../models/Models";
+import {GamePlayer, GameRoom, GetGameRoomsRequest, UserRegisterRequest, UserRegisterResponse} from "../models/Models";
 
 export class GameServerApiClient {
 
   constructor(private readonly axiosInstance: AxiosInstance) {
   }
 
-  checkLogin: () => Promise<boolean> = async () => {
-    const {status} = await this.axiosInstance.post("/checkLogin");
-    return status / 100 === 2;
+  checkLogin: () => Promise<GamePlayer> = async () => {
+    return await this.post("/checkLogin", {});
   }
 
   login: (userid: string, password: string) => Promise<boolean> = async (userid, password) => {

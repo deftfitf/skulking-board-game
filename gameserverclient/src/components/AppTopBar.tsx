@@ -3,6 +3,7 @@ import {AppBar, Box, createMuiTheme, Link, makeStyles, Toolbar} from "@material-
 import clsx from "clsx";
 import {purple} from "@material-ui/core/colors";
 import LoggedInAvatorIcon, {AvatorUser} from "./LoggedInAvatorIcon";
+import {Link as RouterLink} from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
   title: {
@@ -52,7 +53,8 @@ const theme = createMuiTheme({
 
 interface AppTopBarProps {
   auth: boolean;
-  user?: AvatorUser
+  user?: AvatorUser;
+  onLogOut: () => void;
 }
 
 const AppTopBar = (props: AppTopBarProps) => {
@@ -60,14 +62,25 @@ const AppTopBar = (props: AppTopBarProps) => {
 
   let ToolBarRight: JSX.Element;
   if (props.auth && props.user) {
-    ToolBarRight = <LoggedInAvatorIcon user={props.user}/>
+    ToolBarRight = <React.Fragment>
+      <Link
+      variant="h6"
+      underline="none"
+      component={RouterLink}
+      to="/gamerooms/"
+      >
+        {'GAME ROOMS'}
+      </Link>
+      <LoggedInAvatorIcon user={props.user} onLogOut={props.onLogOut}/>
+    </React.Fragment>
   } else {
     ToolBarRight = <React.Fragment>
       <Link
       variant="h6"
       underline="none"
       className={styles.rightLink}
-      href="/login"
+      component={RouterLink}
+      to="/signin"
       >
         {'ログイン'}
       </Link>
@@ -75,7 +88,8 @@ const AppTopBar = (props: AppTopBarProps) => {
       variant="h6"
       underline="none"
       className={clsx(styles.rightLink, styles.linkSecondary)}
-      href="/register"
+      component={RouterLink}
+      to="/signup"
       >
         {'新規登録'}
       </Link>
@@ -92,7 +106,8 @@ const AppTopBar = (props: AppTopBarProps) => {
           underline="none"
           color="inherit"
           className={styles.title}
-          href="/"
+          component={RouterLink}
+          to="/"
           >
             {'SKULKING ONLINE'}
           </Link>
@@ -104,7 +119,8 @@ const AppTopBar = (props: AppTopBarProps) => {
     </AppBar>
   </React.Fragment>
   );
-};
+}
+;
 
 export default AppTopBar;
 

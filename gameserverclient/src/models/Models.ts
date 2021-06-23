@@ -5,6 +5,12 @@ export type GameRoom = {
   joinedPlayerIds: string[];
 }
 
+export type GamePlayer = {
+  playerId: string;
+  playerName: string;
+  icon: string;
+}
+
 export type GetGameRoomsRequest = {
   limit: number;
   exclusiveStartKey?: string;

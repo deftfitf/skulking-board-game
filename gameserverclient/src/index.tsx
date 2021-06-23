@@ -4,12 +4,14 @@ import './index.css';
 import reportWebVitals from './reportWebVitals';
 import {Button, Container, makeStyles, Typography} from "@material-ui/core";
 import AppTopBar from "./components/AppTopBar";
-import {HashRouter, Route, Switch} from "react-router-dom";
+import {HashRouter, Link as RouterLink, Route, Switch} from "react-router-dom";
 import GameRoomList from "./pages/GameRoomList";
 import GameRoom from "./pages/GameRoom";
-import SignIn from "./pages/Signin";
-import SignOut from "./pages/Signout";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
 import PlayerMyPage from "./pages/PlayerMyPage";
+import {gameServerApiClient} from "./module/axiousConfig";
+import {GamePlayer} from "./models/Models";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -63,8 +65,8 @@ const TopPage = () => {
       variant="contained"
       size="large"
       className={classes.button}
-      component="a"
-      href="/register"
+      component={RouterLink}
+      to="/signup"
       >
         新規登録
       </Button>
@@ -73,46 +75,59 @@ const TopPage = () => {
   )
 }
 
-const routes = [
-  {
-    path: "/gamerooms/:gameRoomId",
-    component: GameRoom
-  },
-  {
-    path: "/gamerooms/",
-    component: GameRoomList
-  },
-  {
-    path: "/players/mypage",
-    component: PlayerMyPage
-  },
-  {
-    path: "/signin",
-    component: SignIn
-  },
-  {
-    path: "/signout",
-    component: SignOut
-  },
-  {
-    path: "/",
-    component: TopPage
-  },
-];
-
 const App = () => {
-  const [auth, setAuth] = useState();
+  const [player, setPlayer] = useState<GamePlayer | null>(null);
+
+  const routes = [
+    {
+      path: "/gamerooms/:gameRoomId",
+      component: GameRoom
+    },
+    {
+      path: "/gamerooms/",
+      component: GameRoomList
+    },
+    {
+      path: "/players/mypage",
+      component: PlayerMyPage
+    },
+    {
+      path: "/signin",
+      component: SignIn
+    },
+    {
+      path: "/signup",
+      component: SignUp
+    },
+    {
+      path: "/",
+      component: player !== null ? GameRoomList : TopPage
+    },
+  ];
 
   useEffect(() => {
+    gameServerApiClient
+    .checkLogin()
+    .then(player => {
+      setPlayer(player);
+    })
+    .catch(() => {
+      setPlayer(null);
+    });
 
     return () => {
-
     };
   }, []);
 
   return (
   <HashRouter>
-    <AppTopBar auth={false} user={{username: "ishida", icon: "https://material-ui.com/static/images/avatar/1.jpg"}}/>
+    <AppTopBar
+    auth={player !== null}
+    onLogOut={() => setPlayer(null)}
+    user={{
+      username: player?.playerName ?? 'unknown',
+      icon: player?.icon ?? 'unknown'
+    }}/>
 
     <Switch>
       {routes.map(route => (
