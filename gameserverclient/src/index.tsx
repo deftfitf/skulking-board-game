@@ -4,7 +4,7 @@ import './index.css';
 import reportWebVitals from './reportWebVitals';
 import {Button, Container, makeStyles, Typography} from "@material-ui/core";
 import AppTopBar from "./components/AppTopBar";
-import {HashRouter, Link as RouterLink, Route, Switch} from "react-router-dom";
+import {HashRouter, Link as RouterLink, Route, Switch, useHistory} from "react-router-dom";
 import GameRoomList from "./pages/GameRoomList";
 import GameRoom from "./pages/GameRoom";
 import SignIn from "./pages/SignIn";
@@ -55,37 +55,33 @@ const TopPage = () => {
   const classes = useStyles();
 
   return (
-  <section className={classes.root}>
-    <Container className={classes.container}>
-      <Typography color="inherit" align="center" variant="h2">
-        SKULKING ONLINE
-      </Typography>
-      <Button
-      color="secondary"
-      variant="contained"
-      size="large"
-      className={classes.button}
-      component={RouterLink}
-      to="/signup"
-      >
-        新規登録
-      </Button>
-    </Container>
-  </section>
+  <React.Fragment>
+    <Typography color="inherit" align="center" variant="h2">
+      SKULKING ONLINE
+    </Typography>
+    <Button
+    color="secondary"
+    variant="contained"
+    size="large"
+    className={classes.button}
+    component={RouterLink}
+    to="/signup"
+    >
+      新規登録
+    </Button>
+  </React.Fragment>
   )
 }
 
 const App = () => {
+  const classes = useStyles();
+  const history = useHistory();
   const [player, setPlayer] = useState<GamePlayer | null>(null);
 
   const routes = [
     {
       path: "/gamerooms/:gameRoomId",
       component: GameRoom
-    },
-    {
-      path: "/gamerooms/",
-      component: GameRoomList
     },
     {
       path: "/players/mypage",
@@ -101,7 +97,13 @@ const App = () => {
     },
     {
       path: "/",
-      component: player !== null ? GameRoomList : TopPage
+      render: () => {
+        if (player) {
+          return <GameRoomList gamePlayer={player}/>;
+        } else {
+          return <TopPage/>
+        }
+      }
     },
   ];
 
@@ -109,6 +111,7 @@ const App = () => {
     gameServerApiClient
     .checkLogin()
     .then(player => {
+      console.log(player);
       setPlayer(player);
     })
     .catch(() => {
@@ -129,11 +132,15 @@ const App = () => {
       icon: player?.icon ?? 'unknown'
     }}/>
 
-    <Switch>
-      {routes.map(route => (
-      <Route {...route} />
-      ))}
-    </Switch>
+    <section className={classes.root}>
+      <Container className={classes.container}>
+        <Switch>
+          {routes.map(route => (
+          <Route {...route} />
+          ))}
+        </Switch>
+      </Container>
+    </section>
   </HashRouter>
   );
 }

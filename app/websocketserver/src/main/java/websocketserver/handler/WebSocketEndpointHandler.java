@@ -15,6 +15,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
+import java.io.IOException;
+import java.security.Principal;
 import java.time.Duration;
 
 @Slf4j
@@ -29,20 +31,30 @@ public class WebSocketEndpointHandler implements WebSocketHandler {
 
     @Override
     public @NonNull Mono<Void> handle(WebSocketSession session) {
-        final var sessionSource = Source
-                .fromPublisher(session.receive())
-                .map(wsMessage -> GameCommand.parseFrom(wsMessage.getPayload().asInputStream()));
+        final var playerIdMono = session
+                .getHandshakeInfo().getPrincipal()
+                .map(Principal::getName);
 
-        final var reconnectSourceFlux = Source
-                .fromPublisher(Flux
-                        .defer(session::receive)
-                        .startWith(session.binaryMessage(factory -> factory.wrap(GameCommand.NewConnection.newBuilder().build().toByteArray()))))
-                .map(wsMessage -> GameCommand.parseFrom(wsMessage.getPayload().asInputStream()));
+        final var gameCommandWithPrincipal = playerIdMono.flux()
+                .flatMap(playerId -> session.receive()
+                        .map(wsMessage -> {
+                            log.info("hoge: {}, {}", playerId, wsMessage);
+                            try {
+                                return GameCommand
+                                        .parseFrom(wsMessage.getPayload().asInputStream())
+                                        .toBuilder()
+                                        .setPlayerId(playerId)
+                                        .build();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }));
+
+        final var sessionSource = Source.fromPublisher(gameCommandWithPrincipal);
 
         final var retryableConnectionFlux = Flux
-                .defer(() -> gameServerServiceClient.connect(sessionSource).runWith(Sink.asPublisher(false), actorSystem))
-                .onErrorResume(e -> gameServerServiceClient.connect(reconnectSourceFlux)
-                        .drop(1) // drop connected message
+                .defer(() -> gameServerServiceClient
+                        .connect(sessionSource)
                         .runWith(Sink.asPublisher(false), actorSystem))
                 .doOnError(e -> log.error("There was an error connecting to the Grpc Game Server.", e))
                 .retryWhen(Retry

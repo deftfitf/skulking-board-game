@@ -15,3 +15,7 @@ cdk/cdk.out
 .idea
 cdk/documents
 cdk/src/main/resources/setup
+
+# Proto
+gameserverclient/src/proto/*.ts
+gameserverclient/src/proto/*.js

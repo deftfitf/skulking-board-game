@@ -100,7 +100,8 @@ public class GameRoomActor
         final var builder = newCommandHandlerBuilder();
 
         builder.forNullState()
-                .onCommand(GameCommand.Init.class, this::onInit);
+                .onCommand(GameCommand.Init.class, this::onInit)
+                .onAnyCommand(() -> Effect().none().thenStop());
 
         builder.forAnyState()
                 .onCommand(GameCommand.NewConnection.class, this::onNewConnection)

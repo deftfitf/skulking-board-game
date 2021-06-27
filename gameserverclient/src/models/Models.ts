@@ -24,3 +24,9 @@ export type UserRegisterRequest = {
 export type UserRegisterResponse = {
   playerId: string;
 }
+
+export type GameRoomCreateRequest = {
+  roomSize: number;
+  nOfRounds: number;
+  deckType: "STANDARD" | "EXPANSION";
+}

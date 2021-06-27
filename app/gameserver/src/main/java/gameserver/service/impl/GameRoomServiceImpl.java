@@ -35,6 +35,7 @@ public class GameRoomServiceImpl implements GameServerService {
 
     @Override
     public Source<gameserver.service.grpc.GameEvent, NotUsed> connect(Source<gameserver.service.grpc.GameCommand, NotUsed> in) {
+        log.info("New Connection Found");
         final var sharding = ClusterSharding.get(system);
 
         final var connectionSourceAndRoomRef = in.take(1)

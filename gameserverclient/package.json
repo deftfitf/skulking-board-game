@@ -24,12 +24,16 @@
     "start": "react-scripts start",
     "build": "BUILD_PATH='../app/websocketserver/src/main/resources/react' react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "protoc": "./run_protoc.sh"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "ignorePatterns": [
+      "**/*_pb.js"
     ]
   },
   "browserslist": {
@@ -46,6 +50,8 @@
   },
   "proxy": "http://localhost:8080",
   "devDependencies": {
-    "@types/react-router-dom": "^5.1.7"
+    "@types/react-router-dom": "^5.1.7",
+    "grpc-tools": "^1.11.2",
+    "grpc_tools_node_protoc_ts": "^5.3.0"
   }
 }

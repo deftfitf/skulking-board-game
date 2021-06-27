@@ -30,7 +30,7 @@ export class GameServerApiClient {
     return await this.get(`/gamerooms/${gameRoomId}`);
   }
 
-  getGameRooms: (request: GetGameRoomsRequest) => Promise<GameRoom> = async (request) => {
+  getGameRooms: (request: GetGameRoomsRequest) => Promise<GameRoom[]> = async (request) => {
     return await this.post("/gamerooms/", request);
   }
 
@@ -61,9 +61,11 @@ export class GameServerApiClient {
   }
 
   private handleAxiosError = (e: AxiosError) => {
+    throw e;
   }
 
   private handleUnexpectedError = (e: Error) => {
+    throw e;
   }
 
 }
