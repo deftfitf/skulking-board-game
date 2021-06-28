@@ -143,19 +143,11 @@ const GameRoom = () => {
     socket.onmessage = (ev: MessageEvent) => {
       ev.data.arrayBuffer().then((buffer: Uint8Array) => {
         const gameEvent = GameEvent.deserializeBinary(buffer);
-        onGameEvent(gameEvent);
+        gameState?.applyEvent(gameEvent);
       });
     };
 
     return () => socket.close();
-  };
-
-  const onGameEvent = (gameEvent: GameEvent) => {
-    switch (gameEvent.getEventCase()) {
-      case GameEvent.EventCase.A_PLAYER_BID_DECLARED:
-
-      case GameEvent.EventCase.GAME_ENDED:
-    }
   };
 
   return (
