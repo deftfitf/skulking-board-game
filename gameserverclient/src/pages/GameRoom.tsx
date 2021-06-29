@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 
-import {useLocation, useParams} from 'react-router-dom';
+import {useHistory, useLocation, useParams} from 'react-router-dom';
 import {GameRoomCreateRequest} from "../models/Models";
 import {GameServerSocketClient} from "../clients/GameServerSocketClient";
 import {GameEvent} from "../proto/GameServerService_pb";
@@ -9,6 +9,7 @@ import {
   BiddingPhase,
   FinishedPhase,
   FuturePredicateWaitingPhase,
+  GameEnded,
   GameState,
   HandChangeWaitingPhase,
   NextTrickLeadPlayerChangingPhase,
@@ -97,6 +98,7 @@ const FinishedPhaseBoard = (props: { gameState: FinishedPhase }) => {
 const GameRoom = () => {
   const {gameRoomId} = useParams<{ gameRoomId: string }>();
   const location = useLocation<GameRoomProps>();
+  const history = useHistory();
   const {state} = location;
   const [gameState, setGameState] = useState<GameState>();
 
@@ -143,12 +145,18 @@ const GameRoom = () => {
     socket.onmessage = (ev: MessageEvent) => {
       ev.data.arrayBuffer().then((buffer: Uint8Array) => {
         const gameEvent = GameEvent.deserializeBinary(buffer);
-        gameState?.applyEvent(gameEvent);
+        setGameState(oldState => oldState?.applyEvent(gameEvent));
+        console.log(gameEvent);
       });
     };
 
     return () => socket.close();
   };
+
+  if (gameState instanceof GameEnded) {
+    history.push('/');
+    return null;
+  }
 
   return (
   <React.Fragment>

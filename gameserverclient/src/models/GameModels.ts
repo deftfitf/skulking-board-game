@@ -43,8 +43,8 @@ export interface GameState {
 export class StartPhase implements GameState {
 
   constructor(
-  private myPlayerId: string,
-  private eventStack: GameEventStack,
+  readonly myPlayerId: string,
+  readonly eventStack: GameEventStack,
   readonly rule: GameRule,
   readonly roomOwnerId: string,
   readonly playerIds: string[]
@@ -77,7 +77,7 @@ export class StartPhase implements GameState {
         this.myPlayerId,
         this.eventStack, this.rule,
         this.roomOwnerId, this.roomOwnerId,
-        gameStarted.getPlayerIdList(), null, 0,
+        gameStarted.getPlayerIdList(), null, 1,
         []
         );
 
@@ -93,8 +93,8 @@ export class StartPhase implements GameState {
 export class BiddingPhase implements GameState {
 
   constructor(
-  private myPlayerId: string,
-  private eventStack: GameEventStack,
+  readonly myPlayerId: string,
+  readonly eventStack: GameEventStack,
   readonly rule: GameRule,
   readonly roomOwnerId: string,
   readonly dealerId: string,
@@ -129,7 +129,7 @@ export class BiddingPhase implements GameState {
         return new TrickPhase(
         this.myPlayerId,
         this.eventStack, this.rule, this.roomOwnerId, this.round, this.dealerId,
-        trickingPlayers, trickStarted.getDeck(),
+        trickingPlayers, trickStarted.getCardList(), trickStarted.getDeck(),
         0, null, [], 1, this.scoreBoard
         );
 
@@ -143,11 +143,11 @@ export class BiddingPhase implements GameState {
 }
 
 export type TrickingPlayer = {
-  playerId: string;
-  declaredBid: number;
-  tookTrick: number;
-  card: number;
-  tookBonus: number
+  readonly playerId: string;
+  readonly declaredBid: number;
+  readonly tookTrick: number;
+  readonly card: number;
+  readonly tookBonus: number
 }
 
 export enum MustFollow {
@@ -160,13 +160,14 @@ export enum MustFollow {
 export class TrickPhase implements GameState {
 
   constructor(
-  private myPlayerId: string,
+  readonly myPlayerId: string,
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
   readonly roomOwnerId: string,
   readonly round: number,
-  readonly dealerId: string,
+  private dealerId: string,
   readonly players: TrickingPlayer[],
+  private myCardIds: string[],
   readonly deck: number,
   readonly stack: number,
   readonly mustFollow: MustFollow | null,
@@ -181,18 +182,48 @@ export class TrickPhase implements GameState {
 
     switch (event.getEventCase()) {
       case GameEvent.EventCase.A_PLAYER_TRICK_PLAYED:
+        const played = event.getAPlayerTrickPlayed()!;
+
+        const idx = this.players.findIndex(player => player.playerId == played.getPlayerId());
+        this.players[idx] = {
+          ...this.players[idx],
+          card: this.players[idx].card - 1,
+        }
+
+        this.field.push({
+          playerId: played.getPlayerId(),
+          card: played.getPlayedCard()!
+        });
+
+        return this;
 
       case GameEvent.EventCase.NEXT_TRICK_LEAD_PLAYER_CHANGEABLE_NOTICE:
-        return new NextTrickLeadPlayerChangingPhase(this);
+        const nextTrickLeadPlayerChangeableNotice = event.getNextTrickLeadPlayerChangeableNotice()!;
+
+        return new NextTrickLeadPlayerChangingPhase(this, nextTrickLeadPlayerChangeableNotice.getPlayerId());
 
       case GameEvent.EventCase.HAND_CHANGE_AVAILABLE_NOTICE:
-        return new HandChangeWaitingPhase(this);
+        const handChangeAvailableNotice = event.getHandChangeAvailableNotice()!;
+
+        return new HandChangeWaitingPhase(this,
+        handChangeAvailableNotice.getPlayerId(),
+        handChangeAvailableNotice.getDrawCardsList());
 
       case GameEvent.EventCase.FUTURE_PREDICATE_AVAILABLE:
-        return new FuturePredicateWaitingPhase(this);
+        const futurePredicateNotice = event.getFuturePredicateAvailable()!;
+        const targetPlayerId = futurePredicateNotice.getPlayerId();
+
+        return new FuturePredicateWaitingPhase(this,
+        targetPlayerId,
+        targetPlayerId == this.myPlayerId ? futurePredicateNotice.getDeckCardList() : undefined);
 
       case GameEvent.EventCase.DECLARE_BID_CHANGE_AVAILABLE:
-        return new BidDeclareChangeWaitingPhase(this);
+        const declareBidChangeAvailable = event.getDeclareBidChangeAvailable()!;
+
+        return new BidDeclareChangeWaitingPhase(this,
+        declareBidChangeAvailable.getPlayerId(),
+        declareBidChangeAvailable.getMax(),
+        declareBidChangeAvailable.getMin());
 
       case GameEvent.EventCase.ROUND_FINISHED:
         const roundFinished = event.getRoundFinished()!;
@@ -235,8 +266,172 @@ export class TrickPhase implements GameState {
         });
 
         return new FinishedPhase(
-        this.myPlayerId, this.eventStack, this.rule,
+        this.myPlayerId, this, this.eventStack, this.rule,
         gameFinished.getGameWinnerId(), gameScore
+        );
+
+      default:
+        return this;
+    }
+  }
+
+  getGameEvents = this.eventStack.getGameEvents;
+
+  changeLeadPlayerId = (newLeadPlayerId: string) => this.dealerId = newLeadPlayerId;
+
+  addMyCards = (cards: string[]) => this.myCardIds.push(...cards);
+
+  removeMyCards = (cards: string[]) =>
+  this.myCardIds = this.myCardIds.filter(cardId => cards.includes(cardId));
+
+  changeBidDeclare = (playerId: string, newBid: number) => {
+    const idx = this.players.findIndex(player => player.playerId == playerId);
+    this.players[idx] = {
+      ...this.players[idx],
+      declaredBid: newBid
+    }
+  }
+
+  getDealerId = () => this.dealerId;
+
+  getMyCardIds = () => [...this.myCardIds];
+
+}
+
+export class NextTrickLeadPlayerChangingPhase implements GameState {
+
+  constructor(
+  readonly gameState: TrickPhase,
+  readonly changingPlayerId: string,
+  ) {
+  }
+
+  applyEvent(event: GameEvent): GameState {
+    switch (event.getEventCase()) {
+      case GameEvent.EventCase.NEXT_TRICK_LEAD_PLAYER_CHANGED:
+        const changed = event.getNextTrickLeadPlayerChanged()!;
+        this.gameState.changeLeadPlayerId(changed.getNewLeadPlayerId());
+
+        return this.gameState;
+
+      default:
+        return this;
+    }
+  }
+
+  getGameEvents = this.gameState.eventStack.getGameEvents;
+
+}
+
+export class HandChangeWaitingPhase implements GameState {
+
+  constructor(
+  readonly gameState: TrickPhase,
+  readonly changingPlayerId: string,
+  readonly drawCardIds?: string[],
+  ) {
+  }
+
+  applyEvent(event: GameEvent): GameState {
+    switch (event.getEventCase()) {
+      case GameEvent.EventCase.PLAYER_HAND_CHANGED:
+        const handChanged = event.getPlayerHandChanged()!;
+
+        if (handChanged.getPlayerId() == this.gameState.myPlayerId) {
+          this.gameState.addMyCards(this.drawCardIds!);
+          this.gameState.removeMyCards(handChanged.getReturnCardsList());
+        }
+
+        return this.gameState;
+
+      default:
+        return this;
+    }
+  }
+
+  getGameEvents = this.gameState.eventStack.getGameEvents;
+
+}
+
+export class FuturePredicateWaitingPhase implements GameState {
+
+  constructor(
+  readonly gameState: TrickPhase,
+  readonly predicatingPlayerId: string,
+  readonly deckCards?: string[],
+  ) {
+  }
+
+  applyEvent(event: GameEvent): GameState {
+    switch (event.getEventCase()) {
+      case GameEvent.EventCase.FUTURE_PREDICATED:
+        return this.gameState;
+
+      default:
+        return this;
+    }
+  }
+
+  getGameEvents = this.gameState.eventStack.getGameEvents;
+
+}
+
+export class BidDeclareChangeWaitingPhase implements GameState {
+
+  constructor(
+  readonly gameState: TrickPhase,
+  readonly changingPlayerId: string,
+  readonly max: number,
+  readonly min: number,
+  ) {
+  }
+
+  applyEvent(event: GameEvent): GameState {
+    switch (event.getEventCase()) {
+      case GameEvent.EventCase.BID_DECLARE_CHANGED:
+        const bidDeclareChanged = event.getBidDeclareChanged()!;
+
+        this.gameState.changeBidDeclare(
+        bidDeclareChanged.getChangedPlayerId(),
+        bidDeclareChanged.getChangedBid());
+
+        return this.gameState;
+
+      default:
+        return this;
+    }
+  }
+
+  getGameEvents = this.gameState.eventStack.getGameEvents;
+
+}
+
+export class FinishedPhase implements GameState {
+
+  constructor(
+  readonly myPlayerId: string,
+  readonly lastState: TrickPhase,
+  readonly eventStack: GameEventStack,
+  readonly rule: GameRule,
+  readonly winnerId: string,
+  readonly gameScore: Map<string, { score: number, bonus: number }>[],
+  ) {
+  }
+
+  applyEvent(event: GameEvent): GameState {
+    switch (event.getEventCase()) {
+      case GameEvent.EventCase.GAME_ENDED:
+        return new GameEnded();
+
+      case GameEvent.EventCase.BIDDING_STARTED:
+        const biddingStarted = event.getBiddingStarted()!;
+
+        return new BiddingPhase(
+        this.myPlayerId,
+        this.eventStack, this.rule,
+        this.lastState.roomOwnerId, biddingStarted.getDealerId(),
+        this.lastState.players.map(player => player.playerId), null, 1,
+        []
         );
 
       default:
@@ -248,73 +443,14 @@ export class TrickPhase implements GameState {
 
 }
 
-export class NextTrickLeadPlayerChangingPhase implements GameState {
-
-  constructor(private gameState: TrickPhase) {
-  }
+export class GameEnded implements GameState {
 
   applyEvent(event: GameEvent): GameState {
     return this;
   }
 
-  getGameEvents = this.gameState.eventStack.getGameEvents;
-
-}
-
-export class HandChangeWaitingPhase implements GameState {
-
-  constructor(private gameState: TrickPhase) {
+  getGameEvents(): string[] {
+    return [];
   }
-
-  applyEvent(event: GameEvent): GameState {
-    return this;
-  }
-
-  getGameEvents = this.gameState.eventStack.getGameEvents;
-
-}
-
-export class FuturePredicateWaitingPhase implements GameState {
-
-  constructor(private gameState: TrickPhase) {
-  }
-
-  applyEvent(event: GameEvent): GameState {
-    return this;
-  }
-
-  getGameEvents = this.gameState.eventStack.getGameEvents;
-
-}
-
-export class BidDeclareChangeWaitingPhase implements GameState {
-
-  constructor(private gameState: TrickPhase) {
-  }
-
-  applyEvent(event: GameEvent): GameState {
-    return this;
-  }
-
-  getGameEvents = this.gameState.eventStack.getGameEvents;
-
-}
-
-export class FinishedPhase implements GameState {
-
-  constructor(
-  private myPlayerId: string,
-  readonly eventStack: GameEventStack,
-  readonly rule: GameRule,
-  readonly winnerId: string,
-  readonly gameScore: Map<string, { score: number, bonus: number }>[],
-  ) {
-  }
-
-  applyEvent(event: GameEvent): GameState {
-    return this;
-  }
-
-  getGameEvents = this.eventStack.getGameEvents;
 
 }
