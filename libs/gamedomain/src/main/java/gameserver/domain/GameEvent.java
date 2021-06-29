@@ -17,14 +17,14 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class Initialized implements GameEvent {
+    public static class Initialized implements GameEvent {
         @NonNull PlayerId firstDealerId;
         @NonNull GameRule gameRule;
     }
 
     @Value
     @Builder
-    class ConnectionEstablished implements GameEvent {
+    public static class ConnectionEstablished implements GameEvent {
         @NonNull PlayerId playerId;
 
         @Override
@@ -35,7 +35,7 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class ConnectionClosed implements GameEvent {
+    public static class ConnectionClosed implements GameEvent {
         @NonNull PlayerId playerId;
 
         @Override
@@ -46,19 +46,19 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class APlayerJoined implements GameEvent {
+    public static class APlayerJoined implements GameEvent {
         @NonNull PlayerId playerId;
     }
 
     @Value
     @Builder
-    class APlayerLeft implements GameEvent {
+    public static class APlayerLeft implements GameEvent {
         @NonNull PlayerId playerId;
     }
 
     @Value
     @Builder
-    class RoomDealerChanged implements GameEvent {
+    public static class RoomDealerChanged implements GameEvent {
         @NonNull PlayerId oldDealer;
         @NonNull PlayerId newDealer;
 
@@ -70,13 +70,16 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class GameStarted implements GameEvent {
-        @NonNull PlayerId playerId;
+    public static class GameStarted implements GameEvent {
+        @NonNull List<PlayerId> playerIds;
     }
 
     @Value
     @Builder
-    class BiddingStarted implements GameEvent {
+    public static class BiddingStarted implements GameEvent {
+        int round;
+        PlayerId dealerId;
+
         @Override
         public boolean isPublishOnly() {
             return true;
@@ -85,14 +88,16 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class APlayerBidDeclared implements GameEvent {
+    public static class APlayerBidDeclared implements GameEvent {
         @NonNull PlayerId playerId;
         int bidDeclared;
     }
 
     @Value
     @Builder
-    class RoundStarted implements GameEvent {
+    public static class RoundStarted implements GameEvent {
+        int round;
+        int deck;
         @NonNull List<JoinedPlayer> players;
 
         @Value
@@ -110,7 +115,11 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class TrickStarted implements GameEvent {
+    public static class TrickStarted implements GameEvent {
+        int deck;
+        int trick;
+        List<Player> players;
+
         @Override
         public boolean isPublishOnly() {
             return true;
@@ -119,14 +128,14 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class APlayerTrickPlayed implements GameEvent {
+    public static class APlayerTrickPlayed implements GameEvent {
         @NonNull PlayerId playerId;
         @NonNull Card playedCard;
     }
 
     @Value
     @Builder
-    class APlayerWon implements GameEvent {
+    public static class APlayerWon implements GameEvent {
         @NonNull PlayerId winnerId;
         @NonNull Card card;
         int trickBonus;
@@ -139,7 +148,7 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class AllRanAway implements GameEvent {
+    public static class AllRanAway implements GameEvent {
         @NonNull PlayerId winnerId;
         @NonNull Card card;
 
@@ -151,7 +160,7 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class KrakenAppeared implements GameEvent {
+    public static class KrakenAppeared implements GameEvent {
         @NonNull PlayerId mustHaveWon;
 
         @Override
@@ -162,7 +171,7 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class DeclareBidChangeAvailable implements GameEvent {
+    public static class DeclareBidChangeAvailable implements GameEvent {
         @NonNull PlayerId playerId;
         int min;
         int max;
@@ -170,27 +179,27 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class NextTrickLeadPlayerChangeableNotice implements GameEvent {
+    public static class NextTrickLeadPlayerChangeableNotice implements GameEvent {
         @NonNull PlayerId playerId;
     }
 
     @Value
     @Builder
-    class HandChangeAvailableNotice implements GameEvent {
+    public static class HandChangeAvailableNotice implements GameEvent {
         @NonNull PlayerId playerId;
         @NonNull List<CardId> drawCards;
     }
 
     @Value
     @Builder
-    class FuturePredicateAvailable implements GameEvent {
+    public static class FuturePredicateAvailable implements GameEvent {
         PlayerId playerId;
         List<CardId> deckCard;
     }
 
     @Value
     @Builder
-    class RoundFinished implements GameEvent {
+    public static class RoundFinished implements GameEvent {
         Map<PlayerId, Score> roundScore;
 
         @Override
@@ -201,21 +210,21 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class NextTrickLeadPlayerChanged implements GameEvent {
+    public static class NextTrickLeadPlayerChanged implements GameEvent {
         @NonNull PlayerId playerId;
         @NonNull PlayerId newLeadPlayerId;
     }
 
     @Value
     @Builder
-    class PlayerHandChanged implements GameEvent {
+    public static class PlayerHandChanged implements GameEvent {
         @NonNull PlayerId playerId;
         @NonNull Set<CardId> returnCards;
     }
 
     @Value
     @Builder
-    class FuturePredicated implements GameEvent {
+    public static class FuturePredicated implements GameEvent {
         @NonNull PlayerId predicatedPlayerId;
 
         @Override
@@ -226,44 +235,45 @@ public interface GameEvent extends CborSerializable {
 
     @Value
     @Builder
-    class BidDeclareChanged implements GameEvent {
+    public static class BidDeclareChanged implements GameEvent {
         @NonNull PlayerId changedPlayerId;
         int changedBid;
     }
 
     @Value
     @Builder
-    class GameFinished implements GameEvent {
+    public static class GameFinished implements GameEvent {
         @NonNull PlayerId gameWinnerId;
         @NonNull ScoreBoard scoreBoard;
     }
 
     @Value
     @Builder
-    class GameReplayed implements GameEvent {
+    public static class GameReplayed implements GameEvent {
         @NonNull PlayerId gameWinnerId;
     }
 
     @Value
     @Builder
-    class GameEnded implements GameEvent {
+    public static class GameEnded implements GameEvent {
     }
 
     @Value
     @Builder
-    class GameSnapshot implements GameEvent {
+    public static class GameSnapshot implements GameEvent {
         @NonNull GameState gameState;
     }
 
     @Value
     @Builder
-    class GameException implements GameEvent {
+    public static class GameException implements GameEvent {
+        @NonNull PlayerId playerId;
         @NonNull InputCheckResult.InvalidInputType invalidInputType;
     }
 
     @Value
     @Builder
-    class Stored implements GameEvent {
+    public static class Stored implements GameEvent {
         GameState state;
     }
 

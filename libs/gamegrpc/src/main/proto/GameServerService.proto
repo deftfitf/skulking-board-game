@@ -142,10 +142,24 @@ message GameEvent {
     }
 
     message GameStarted {
-        string player_id = 1;
+        repeated string player_id = 1;
+    }
+
+    message RoundStarted {
+        int32 round = 1;
+        int32 deck = 2;
+        repeated JoinedPlayer joined_players = 4;
+        repeated string card = 5;
+
+        message JoinedPlayer {
+            string player_id = 1;
+            int32 card = 3;
+        }
     }
 
     message BiddingStarted {
+        int32 round = 1;
+        string dealer_id = 2;
     }
 
     message APlayerBidDeclared {
@@ -153,16 +167,15 @@ message GameEvent {
         int32 bid_declared = 2;
     }
 
-    message RoundStarted {
-        repeated JoinedPlayer joined_players = 1;
-
-        message JoinedPlayer {
-            string player_id = 1;
-            repeated string card_id = 2;
-        }
-    }
-
     message TrickStarted {
+        int32 trick = 1;
+        repeated BidPlayer bid_players = 2;
+
+        message BidPlayer {
+            string player_id = 1;
+            int32 bid = 2;
+            int32 card = 3;
+        }
     }
 
     message APlayerTrickPlayed {

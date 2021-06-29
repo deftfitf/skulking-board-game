@@ -350,9 +350,8 @@ public class GameRoomActorTest {
         probe.expectMessage(participantBidDeclared);
         participantProbe.expectMessage(participantBidDeclared);
 
-        final var trickStarted = GameEvent.TrickStarted.builder().build();
-        probe.expectMessage(trickStarted);
-        participantProbe.expectMessage(trickStarted);
+        probe.expectMessageClass(GameEvent.TrickStarted.class);
+        participantProbe.expectMessageClass(GameEvent.TrickStarted.class);
     }
 
     @Test

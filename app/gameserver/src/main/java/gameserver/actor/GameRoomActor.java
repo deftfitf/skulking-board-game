@@ -101,6 +101,7 @@ public class GameRoomActor
 
         builder.forNullState()
                 .onCommand(GameCommand.Init.class, this::onInit)
+                .orElse(builder.forAnyState())
                 .onAnyCommand(() -> Effect().none().thenStop());
 
         builder.forAnyState()
@@ -204,11 +205,12 @@ public class GameRoomActor
         if (activeConnection == null) {
             return Effect().none();
         }
-        return whenInvalidInput(invalidInput, activeConnection);
+        return whenInvalidInput(sender, invalidInput, activeConnection);
     }
 
-    private Effect<GameEvent, GameState> whenInvalidInput(InputCheckResult.InvalidInput invalidInput, ActorRef<GameEvent> sender) {
+    private Effect<GameEvent, GameState> whenInvalidInput(PlayerId playerId, InputCheckResult.InvalidInput invalidInput, ActorRef<GameEvent> sender) {
         final var event = GameEvent.GameException.builder()
+                .playerId(playerId)
                 .invalidInputType(invalidInput.getInvalidInputType())
                 .build();
 
@@ -236,7 +238,7 @@ public class GameRoomActor
                     });
 
         } else if (joinResult instanceof InputCheckResult.InvalidInput) {
-            return whenInvalidInput((InputCheckResult.InvalidInput) joinResult, join.getPlayerRef());
+            return whenInvalidInput(join.getPlayerId(), (InputCheckResult.InvalidInput) joinResult, join.getPlayerRef());
         }
 
         return Effect().unhandled();
@@ -279,7 +281,7 @@ public class GameRoomActor
                     .persist(left)
                     .thenRun(effect);
         } else if (canLeaveResult instanceof InputCheckResult.InvalidInput) {
-            return whenInvalidInput((InputCheckResult.InvalidInput) canLeaveResult, leave.getPlayerRef());
+            return whenInvalidInput(leave.getPlayerId(), (InputCheckResult.InvalidInput) canLeaveResult, leave.getPlayerRef());
         }
 
         return Effect().unhandled();
@@ -288,6 +290,7 @@ public class GameRoomActor
     private Effect<GameEvent, GameState> onStart(GameState.StartPhase state, GameCommand.GameStart start) {
         if (!state.getDealerId().equals(start.getPlayerId())) {
             final var event = GameEvent.GameException.builder()
+                    .playerId(start.getPlayerId())
                     .invalidInputType(InputCheckResult.InvalidInputType.FAILED_START_GAME_NOT_DEALER)
                     .build();
 
@@ -298,7 +301,7 @@ public class GameRoomActor
         final var canStartBidResult = state.canStartBid();
         if (canStartBidResult.equals(InputCheckResult.ApplyableInput.INSTANCE)) {
             final var gameStarted = GameEvent.GameStarted.builder()
-                    .playerId(start.getPlayerId())
+                    .playerIds(state.getPlayerIds())
                     .build();
 
             return Effect()
@@ -532,7 +535,10 @@ public class GameRoomActor
     private GameState applyGameStarted(GameState.StartPhase state, GameEvent.GameStarted gameStarted) {
         final var biddingPhase = state.startBidding();
         biddingPhase.addGameEvent(extractRoundStartedEvent(biddingPhase));
-        biddingPhase.addGameEvent(GameEvent.BiddingStarted.builder().build());
+        biddingPhase.addGameEvent(GameEvent.BiddingStarted.builder()
+                .round(1)
+                .dealerId(state.getDealerId())
+                .build());
         return biddingPhase;
     }
 
@@ -541,7 +547,11 @@ public class GameRoomActor
 
         if (state.canStartRound()) {
             final var trickPhase = state.startTrick();
-            trickPhase.addGameEvent(GameEvent.TrickStarted.builder().build());
+            trickPhase.addGameEvent(GameEvent.TrickStarted.builder()
+                    .deck(trickPhase.getDeck().size())
+                    .trick(trickPhase.getTrick())
+                    .players(trickPhase.getPlayers())
+                    .build());
             return trickPhase;
         }
 
@@ -610,7 +620,10 @@ public class GameRoomActor
             final var biddingPhase = state.nextBiddingPhase();
             state.getEventQueue().forEach(biddingPhase::addGameEvent);
             biddingPhase.addGameEvent(extractRoundStartedEvent(biddingPhase));
-            biddingPhase.addGameEvent(GameEvent.BiddingStarted.builder().build());
+            biddingPhase.addGameEvent(GameEvent.BiddingStarted.builder()
+                    .round(biddingPhase.getRound())
+                    .dealerId(biddingPhase.getDealerId())
+                    .build());
             return biddingPhase;
         }
 
@@ -626,7 +639,10 @@ public class GameRoomActor
                         .build())
                 .collect(Collectors.toList());
 
-        return GameEvent.RoundStarted.builder().players(joinedPlayers).build();
+        return GameEvent.RoundStarted.builder()
+                .round(biddingPhase.getRound())
+                .deck(biddingPhase.getDeck().size())
+                .players(joinedPlayers).build();
     }
 
     private GameState handlePiratesEvent(GameState.TrickPhase state, GameState.TrickPhase.APlayerWon aPlayerWon) {
@@ -712,7 +728,10 @@ public class GameRoomActor
     private GameState applyGameReplayed(GameState.FinishedPhase state, GameEvent.GameReplayed gameReplayed) {
         final var biddingPhase = state.replayGame();
         biddingPhase.addGameEvent(extractRoundStartedEvent(biddingPhase));
-        biddingPhase.addGameEvent(GameEvent.BiddingStarted.builder().build());
+        biddingPhase.addGameEvent(GameEvent.BiddingStarted.builder()
+                .round(biddingPhase.getRound())
+                .dealerId(biddingPhase.getDealerId())
+                .build());
         return biddingPhase;
     }
 

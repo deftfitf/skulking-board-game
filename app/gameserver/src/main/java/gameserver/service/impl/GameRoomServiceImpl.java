@@ -3,7 +3,7 @@ package gameserver.service.impl;
 import akka.NotUsed;
 import akka.actor.typed.ActorSystem;
 import akka.cluster.sharding.typed.javadsl.ClusterSharding;
-import akka.japi.Pair;
+import akka.cluster.sharding.typed.javadsl.EntityRef;
 import akka.stream.OverflowStrategy;
 import akka.stream.javadsl.Keep;
 import akka.stream.javadsl.Sink;
@@ -15,9 +15,11 @@ import gameserver.domain.GameEvent;
 import gameserver.domain.PlayerId;
 import gameserver.service.grpc.GameServerService;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -85,15 +87,16 @@ public class GameRoomServiceImpl implements GameServerService {
                     }
                     gameRoomActorRef.tell(connectionCommand);
 
-                    return Pair.apply(actorSource, gameRoomActorRef);
+                    return new ConnectionEstablished(playerId, actorSource, gameRoomActorRef);
                 })
                 .toMat(Sink.head(), Keep.right())
                 .run(system)
                 .toCompletableFuture()
                 .join();
 
-        final var connectionSource = connectionSourceAndRoomRef.first();
-        final var roomRef = connectionSourceAndRoomRef.second();
+        final var connectionPlayerId = connectionSourceAndRoomRef.getConnectionPlayerId();
+        final var connectionSource = connectionSourceAndRoomRef.getConnectionSource();
+        final var roomRef = connectionSourceAndRoomRef.getGameCommandEntityRef();
 
         in.drop(1).to(Sink.foreach(_gameCommand -> {
             log.info("raw command: {}", _gameCommand);
@@ -102,8 +105,16 @@ public class GameRoomServiceImpl implements GameServerService {
         })).run(system);
 
         return connectionSource
-                .map(gameEventAdapter::adapt)
+                .map(event -> gameEventAdapter.adapt(connectionPlayerId, event))
+                .filter(Objects::nonNull)
                 .keepAlive(KEEP_ALIVE_MESSAGE_DURATION, this::keepAliveEventSupplier);
+    }
+
+    @Value
+    public static class ConnectionEstablished {
+        PlayerId connectionPlayerId;
+        Source<GameEvent, NotUsed> connectionSource;
+        EntityRef<GameCommand> gameCommandEntityRef;
     }
 
     private boolean actorSourceCompletionMatcher(GameEvent gameEvent) {

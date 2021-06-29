@@ -40,6 +40,31 @@ export interface GameState {
 
 }
 
+const createBiddingPhase = (
+myPlayerId: string,
+eventStack: GameEventStack,
+gameRule: GameRule,
+roomOwnerId: string,
+scoreBoard: Map<string, { score: number, bonus: number }>[],
+event: GameEvent.RoundStarted
+) => {
+  const biddingPlayers = event.getJoinedPlayersList()
+  .map(player => ({
+    playerId: player.getPlayerId(),
+    card: player.getCard()
+  }));
+
+  return new BiddingPhase(
+  myPlayerId,
+  eventStack, gameRule,
+  roomOwnerId, roomOwnerId,
+  event.getDeck(), biddingPlayers,
+  event.getCardList(),
+  null, 1,
+  scoreBoard
+  );
+}
+
 export class StartPhase implements GameState {
 
   constructor(
@@ -70,15 +95,10 @@ export class StartPhase implements GameState {
         this.playerIds.filter(id => aPlayerLeft.getPlayerId() !== id)
         );
 
-      case GameEvent.EventCase.GAME_STARTED:
-        const gameStarted = event.getGameStarted()!;
-
-        return new BiddingPhase(
-        this.myPlayerId,
-        this.eventStack, this.rule,
-        this.roomOwnerId, this.roomOwnerId,
-        gameStarted.getPlayerIdList(), null, 1,
-        []
+      case GameEvent.EventCase.ROUND_STARTED:
+        return createBiddingPhase(
+        this.myPlayerId, this.eventStack, this.rule,
+        this.roomOwnerId, [], event.getRoundStarted()!
         );
 
       default:
@@ -90,6 +110,11 @@ export class StartPhase implements GameState {
 
 }
 
+export type BiddingPlayer = {
+  readonly playerId: string;
+  readonly card: number;
+}
+
 export class BiddingPhase implements GameState {
 
   constructor(
@@ -98,7 +123,9 @@ export class BiddingPhase implements GameState {
   readonly rule: GameRule,
   readonly roomOwnerId: string,
   readonly dealerId: string,
-  readonly playerIds: string[],
+  readonly deck: number,
+  readonly players: BiddingPlayer[],
+  readonly myCardIds: string[],
   private myBid: number | null,
   private round: number,
   readonly scoreBoard: Map<string, { score: number, bonus: number }>[]
@@ -117,10 +144,10 @@ export class BiddingPhase implements GameState {
 
       case GameEvent.EventCase.TRICK_STARTED:
         const trickStarted = event.getTrickStarted()!;
-        const trickingPlayers = trickStarted.getJoinedPlayersList()
+        const trickingPlayers = trickStarted.getBidPlayersList()
         .map<TrickingPlayer>(joined => ({
           playerId: joined.getPlayerId(),
-          declaredBid: joined.getDeclaredBid(),
+          declaredBid: joined.getBid(),
           tookTrick: 0,
           card: joined.getCard(),
           tookBonus: 0,
@@ -129,7 +156,7 @@ export class BiddingPhase implements GameState {
         return new TrickPhase(
         this.myPlayerId,
         this.eventStack, this.rule, this.roomOwnerId, this.round, this.dealerId,
-        trickingPlayers, trickStarted.getCardList(), trickStarted.getDeck(),
+        trickingPlayers, this.myCardIds, this.deck,
         0, null, [], 1, this.scoreBoard
         );
 
@@ -238,15 +265,10 @@ export class TrickPhase implements GameState {
         this.scoreBoard.push(roundScoreMap);
         return this;
 
-      case GameEvent.EventCase.BIDDING_STARTED:
-        const biddingStarted = event.getBiddingStarted()!;
-
-        return new BiddingPhase(
-        this.myPlayerId,
-        this.eventStack, this.rule,
-        this.roomOwnerId, biddingStarted.getDealerId(),
-        this.players.map(player => player.playerId), null, biddingStarted.getRound(),
-        this.scoreBoard
+      case GameEvent.EventCase.ROUND_STARTED:
+        return createBiddingPhase(
+        this.myPlayerId, this.eventStack, this.rule,
+        this.roomOwnerId, this.scoreBoard, event.getRoundStarted()!
         );
 
       case GameEvent.EventCase.GAME_FINISHED:
@@ -423,15 +445,10 @@ export class FinishedPhase implements GameState {
       case GameEvent.EventCase.GAME_ENDED:
         return new GameEnded();
 
-      case GameEvent.EventCase.BIDDING_STARTED:
-        const biddingStarted = event.getBiddingStarted()!;
-
-        return new BiddingPhase(
-        this.myPlayerId,
-        this.eventStack, this.rule,
-        this.lastState.roomOwnerId, biddingStarted.getDealerId(),
-        this.lastState.players.map(player => player.playerId), null, 1,
-        []
+      case GameEvent.EventCase.ROUND_STARTED:
+        return createBiddingPhase(
+        this.myPlayerId, this.eventStack, this.rule,
+        this.lastState.roomOwnerId, [], event.getRoundStarted()!
         );
 
       default:

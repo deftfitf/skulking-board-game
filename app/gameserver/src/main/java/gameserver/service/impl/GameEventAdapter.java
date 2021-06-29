@@ -2,8 +2,10 @@ package gameserver.service.impl;
 
 import gameserver.domain.CardId;
 import gameserver.domain.GameEvent;
+import gameserver.domain.PlayerId;
 import lombok.RequiredArgsConstructor;
 
+import javax.annotation.Nullable;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -14,7 +16,8 @@ public class GameEventAdapter {
     private final ScoreBoardAdapter scoreBoardAdapter;
     private final GameStateAdapter gameStateAdapter;
 
-    public gameserver.service.grpc.GameEvent adapt(GameEvent _gameEvent) {
+    public @Nullable
+    gameserver.service.grpc.GameEvent adapt(PlayerId playerId, GameEvent _gameEvent) {
         final var bldr = gameserver.service.grpc.GameEvent.newBuilder();
 
         if (_gameEvent instanceof GameEvent.Initialized) {
@@ -26,11 +29,17 @@ public class GameEventAdapter {
                     .build();
         } else if (_gameEvent instanceof GameEvent.ConnectionEstablished) {
             final var connectionEstablished = (GameEvent.ConnectionEstablished) _gameEvent;
+            if (!connectionEstablished.getPlayerId().equals(playerId)) {
+                return null;
+            }
             bldr.setConnectionEstablished(gameserver.service.grpc.GameEvent.ConnectionEstablished.newBuilder()
                     .setPlayerId(connectionEstablished.getPlayerId().getValue())
                     .build());
         } else if (_gameEvent instanceof GameEvent.ConnectionClosed) {
             final var connectionClosed = (GameEvent.ConnectionClosed) _gameEvent;
+            if (!connectionClosed.getPlayerId().equals(playerId)) {
+                return null;
+            }
             bldr.setConnectionClosed(gameserver.service.grpc.GameEvent.ConnectionClosed.newBuilder()
                     .setPlayerId(connectionClosed.getPlayerId().getValue())
                     .build());
@@ -53,29 +62,56 @@ public class GameEventAdapter {
         } else if (_gameEvent instanceof GameEvent.GameStarted) {
             final var gameStarted = (GameEvent.GameStarted) _gameEvent;
             bldr.setGameStarted(gameserver.service.grpc.GameEvent.GameStarted.newBuilder()
-                    .setPlayerId(gameStarted.getPlayerId().getValue())
+                    .addAllPlayerId(gameStarted.getPlayerIds().stream().map(PlayerId::getValue).collect(Collectors.toList()))
                     .build());
         } else if (_gameEvent instanceof GameEvent.BiddingStarted) {
-            bldr.setBiddingStarted(gameserver.service.grpc.GameEvent.BiddingStarted.newBuilder().build());
+            final var biddingStarted = (GameEvent.BiddingStarted) _gameEvent;
+            bldr.setBiddingStarted(gameserver.service.grpc.GameEvent.BiddingStarted.newBuilder()
+                    .setRound(biddingStarted.getRound())
+                    .setDealerId(biddingStarted.getDealerId().getValue())
+                    .build());
         } else if (_gameEvent instanceof GameEvent.APlayerBidDeclared) {
             final var bidDeclared = (GameEvent.APlayerBidDeclared) _gameEvent;
-            bldr.setAPlayerBidDeclared(gameserver.service.grpc.GameEvent.APlayerBidDeclared.newBuilder()
-                    .setPlayerId(bidDeclared.getPlayerId().getValue())
-                    .setBidDeclared(bidDeclared.getBidDeclared())
-                    .build());
+            final var bidDeclaredPlayerBldr = gameserver.service.grpc.GameEvent.APlayerBidDeclared.newBuilder()
+                    .setPlayerId(bidDeclared.getPlayerId().getValue());
+            if (playerId.equals(bidDeclared.getPlayerId())) {
+                bidDeclaredPlayerBldr.setBidDeclared(bidDeclared.getBidDeclared());
+            } else {
+                bidDeclaredPlayerBldr.setBidDeclared(-1);
+            }
+            bldr.setAPlayerBidDeclared(bidDeclaredPlayerBldr.build());
         } else if (_gameEvent instanceof GameEvent.RoundStarted) {
             final var roundStarted = (GameEvent.RoundStarted) _gameEvent;
-            final var joinedPlayers = roundStarted.getPlayers().stream()
-                    .map(joinedPlayer -> gameserver.service.grpc.GameEvent.RoundStarted.JoinedPlayer.newBuilder()
-                            .setPlayerId(joinedPlayer.getPlayerId().getValue())
-                            .addAllCardId(joinedPlayer.getCardIds().stream().map(CardId::getId).collect(Collectors.toList()))
-                            .build())
+            final var cardIds = roundStarted
+                    .getPlayers().stream().filter(player -> player.getPlayerId().equals(playerId)).limit(1)
+                    .flatMap(player -> player.getCardIds().stream().map(CardId::getId))
                     .collect(Collectors.toList());
+
             bldr.setRoundStarted(gameserver.service.grpc.GameEvent.RoundStarted.newBuilder()
-                    .addAllJoinedPlayers(joinedPlayers)
+                    .setRound(roundStarted.getRound())
+                    .setDeck(roundStarted.getDeck())
+                    .addAllCard(cardIds)
+                    .addAllJoinedPlayers(roundStarted.getPlayers().stream()
+                            .map(player -> gameserver.service.grpc.GameEvent.RoundStarted.JoinedPlayer.newBuilder()
+                                    .setPlayerId(player.getPlayerId().getValue())
+                                    .setCard(player.getCardIds().size())
+                                    .build())
+                            .collect(Collectors.toList()))
                     .build());
         } else if (_gameEvent instanceof GameEvent.TrickStarted) {
-            bldr.setTrickStarted(gameserver.service.grpc.GameEvent.TrickStarted.newBuilder().build());
+            final var trickStarted = (GameEvent.TrickStarted) _gameEvent;
+            final var bidPlayers = trickStarted.getPlayers()
+                    .stream().map(player -> gameserver.service.grpc.GameEvent.TrickStarted.BidPlayer.newBuilder()
+                            .setPlayerId(player.getPlayerId().getValue())
+                            .setBid(player.getDeclaredBid())
+                            .setCard(player.getCards().size())
+                            .build())
+                    .collect(Collectors.toList());
+
+            bldr.setTrickStarted(gameserver.service.grpc.GameEvent.TrickStarted.newBuilder()
+                    .setTrick(trickStarted.getTrick())
+                    .addAllBidPlayers(bidPlayers)
+                    .build());
         } else if (_gameEvent instanceof GameEvent.APlayerTrickPlayed) {
             final var trickPlayed = (GameEvent.APlayerTrickPlayed) _gameEvent;
             final var playedCard = cardAdapter.adapt(trickPlayed.getPlayedCard());
@@ -117,20 +153,28 @@ public class GameEventAdapter {
                     .build());
         } else if (_gameEvent instanceof GameEvent.HandChangeAvailableNotice) {
             final var handChangeAvailableNotice = (GameEvent.HandChangeAvailableNotice) _gameEvent;
-            final var drawCards = handChangeAvailableNotice.getDrawCards()
-                    .stream().map(CardId::getId).collect(Collectors.toList());
-            bldr.setHandChangeAvailableNotice(gameserver.service.grpc.GameEvent.HandChangeAvailableNotice.newBuilder()
-                    .setPlayerId(handChangeAvailableNotice.getPlayerId().getValue())
-                    .addAllDrawCards(drawCards)
-                    .build());
+
+            final var noticeBldr = gameserver.service.grpc.GameEvent.HandChangeAvailableNotice.newBuilder()
+                    .setPlayerId(handChangeAvailableNotice.getPlayerId().getValue());
+
+            if (handChangeAvailableNotice.getPlayerId().equals(playerId)) {
+                final var drawCards = handChangeAvailableNotice.getDrawCards()
+                        .stream().map(CardId::getId).collect(Collectors.toList());
+                noticeBldr.addAllDrawCards(drawCards);
+            }
+            bldr.setHandChangeAvailableNotice(noticeBldr.build());
         } else if (_gameEvent instanceof GameEvent.FuturePredicateAvailable) {
             final var futurePredicateAvailable = (GameEvent.FuturePredicateAvailable) _gameEvent;
-            final var deckCards = futurePredicateAvailable.getDeckCard()
-                    .stream().map(CardId::getId).collect(Collectors.toList());
-            bldr.setFuturePredicateAvailable(gameserver.service.grpc.GameEvent.FuturePredicateAvailable.newBuilder()
-                    .setPlayerId(futurePredicateAvailable.getPlayerId().getValue())
-                    .addAllDeckCard(deckCards)
-                    .build());
+
+            final var noticeBldr = gameserver.service.grpc.GameEvent.FuturePredicateAvailable.newBuilder()
+                    .setPlayerId(futurePredicateAvailable.getPlayerId().getValue());
+
+            if (futurePredicateAvailable.getPlayerId().equals(playerId)) {
+                final var deckCards = futurePredicateAvailable.getDeckCard()
+                        .stream().map(CardId::getId).collect(Collectors.toList());
+                noticeBldr.addAllDeckCard(deckCards);
+            }
+            bldr.setFuturePredicateAvailable(noticeBldr.build());
         } else if (_gameEvent instanceof GameEvent.RoundFinished) {
             final var roundFinished = (GameEvent.RoundFinished) _gameEvent;
             final var roundScores = scoreBoardAdapter.adapt(roundFinished.getRoundScore());
@@ -184,6 +228,9 @@ public class GameEventAdapter {
                     .setGameState(state));
         } else if (_gameEvent instanceof GameEvent.GameException) {
             final var gameException = (GameEvent.GameException) _gameEvent;
+            if (!gameException.getPlayerId().equals(playerId)) {
+                return null;
+            }
             final var invalidInputType = gameserver.service.grpc.GameEvent.InvalidInputType.valueOf(gameException.getInvalidInputType().name());
             bldr.setGameException(gameserver.service.grpc.GameEvent.GameException.newBuilder()
                     .setInvalidInputType(invalidInputType)
