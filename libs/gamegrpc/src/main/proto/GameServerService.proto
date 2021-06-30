@@ -116,8 +116,9 @@ message GameEvent {
     }
 
     message Initialized {
-        string first_dealer_id = 1;
-        GameRule game_rule = 2;
+        string game_room_id = 1;
+        string first_dealer_id = 2;
+        GameRule game_rule = 3;
     }
 
     message ConnectionEstablished {

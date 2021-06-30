@@ -18,6 +18,7 @@ public interface GameEvent extends CborSerializable {
     @Value
     @Builder
     public static class Initialized implements GameEvent {
+        @NonNull String gameRoomId;
         @NonNull PlayerId firstDealerId;
         @NonNull GameRule gameRule;
     }

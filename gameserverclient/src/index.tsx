@@ -80,6 +80,10 @@ const App = () => {
 
   const routes = [
     {
+      path: "/gamerooms/new",
+      component: GameRoom
+    },
+    {
       path: "/gamerooms/:gameRoomId",
       component: GameRoom
     },

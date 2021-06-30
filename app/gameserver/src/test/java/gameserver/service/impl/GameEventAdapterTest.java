@@ -23,12 +23,15 @@ public class GameEventAdapterTest {
     public void adapt() {
         {
             final var event = GameEvent.Initialized.builder()
+                    .gameRoomId("gameRoom1")
                     .firstDealerId(new PlayerId("player1"))
                     .gameRule(new GameRule(1, 2, GameRule.DeckType.EXPANSION))
                     .build();
 
             assertThat(adapter.adapt(new PlayerId("player1"), event)).satisfies(actual -> {
                 assertThat(actual.getInitialized()).isNotNull();
+                assertThat(actual.getInitialized().getGameRoomId()).isEqualTo("gameRoom1");
+                assertThat(actual.getInitialized().getFirstDealerId()).isEqualTo("player1");
                 assertThat(actual.getInitialized().getGameRule()).isNotNull();
                 assertThat(actual.getInitialized().getGameRule().getRoomSize()).isEqualTo(1);
                 assertThat(actual.getInitialized().getGameRule().getNOfRounds()).isEqualTo(2);

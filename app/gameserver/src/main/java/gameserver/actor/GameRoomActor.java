@@ -143,6 +143,7 @@ public class GameRoomActor
     private Effect<GameEvent, GameState> onInit(GameCommand.Init init) {
         final var events = List.of(
                 GameEvent.Initialized.builder()
+                        .gameRoomId(gameRoomId)
                         .gameRule(init.getGameRule())
                         .firstDealerId(init.getFirstDealerId())
                         .build(),

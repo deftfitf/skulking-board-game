@@ -46,7 +46,8 @@ public class GameRoomActorTest {
 
     @Test
     public void initialize() {
-        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(newGameRoomId(), dao));
+        final var gameRoomId = newGameRoomId();
+        final ActorRef<GameCommand> gameRoom = testKit.spawn(GameRoomActor.create(gameRoomId, dao));
         final TestProbe<GameEvent> probe = testKit.createTestProbe();
 
         final var dealer = new PlayerId("dealer");
@@ -67,6 +68,7 @@ public class GameRoomActorTest {
         assertThat(initialized)
                 .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.Initialized.class))
                 .satisfies(e -> {
+                    assertThat(e.getGameRoomId()).isEqualTo(gameRoomId);
                     assertThat(e.getFirstDealerId()).isEqualTo(dealer);
                     assertThat(e.getGameRule()).isEqualTo(gameRule);
                 });

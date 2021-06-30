@@ -14,11 +14,13 @@ import {
   HandChangeWaitingPhase,
   NextTrickLeadPlayerChangingPhase,
   StartPhase,
-  TrickPhase
+  TrickPhase,
+  WaitForInitialize
 } from "../models/GameModels";
 
 export interface GameRoomProps {
   createRequest?: GameRoomCreateRequest;
+  playerId?: string;
   isReConnect: boolean;
 }
 
@@ -96,11 +98,13 @@ const FinishedPhaseBoard = (props: { gameState: FinishedPhase }) => {
 
 
 const GameRoom = () => {
-  const {gameRoomId} = useParams<{ gameRoomId: string }>();
+  const props = useParams<{ _gameRoomId: string } | undefined>();
+  const [gameRoomId, setGameRoomId] = useState(props?._gameRoomId);
   const location = useLocation<GameRoomProps>();
   const history = useHistory();
   const {state} = location;
-  const [gameState, setGameState] = useState<GameState>();
+  const [gameState, setGameState] =
+  useState<GameState>(new WaitForInitialize(gameRoomId => setGameRoomId(gameRoomId)));
 
   useEffect(() => {
     let socketReleaseFunction: () => void;
@@ -111,11 +115,13 @@ const GameRoom = () => {
       });
     } else if (state.isReConnect) {
       socketReleaseFunction = connectionConfigure(client => {
-        client.sendNewConnection();
+        client.sendNewConnection(gameRoomId!);
+        client.sendSnapshotRequest(gameRoomId!);
       });
     } else {
       socketReleaseFunction = connectionConfigure(client => {
-        client.sendJoinRoom();
+        client.sendJoinRoom(gameRoomId!);
+        client.sendSnapshotRequest(gameRoomId!);
       });
     }
 
@@ -127,7 +133,7 @@ const GameRoom = () => {
   const connectionConfigure = (onOpen: (client: GameServerSocketClient) => void) => {
     const port = 8080
     const socket = new WebSocket(`ws://localhost:${port}/gameserver`);
-    const gameServerSocketClient = new GameServerSocketClient(socket, gameRoomId);
+    const gameServerSocketClient = new GameServerSocketClient(socket);
 
     socket.onopen = (ev: Event) => {
       console.log("connection opened");

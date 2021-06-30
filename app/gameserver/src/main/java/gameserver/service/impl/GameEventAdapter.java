@@ -24,6 +24,7 @@ public class GameEventAdapter {
             final var initialized = (GameEvent.Initialized) _gameEvent;
             final var gameRule = gameRuleAdapter.adapt(initialized.getGameRule());
             bldr.setInitialized(gameserver.service.grpc.GameEvent.Initialized.newBuilder()
+                    .setGameRoomId(initialized.getGameRoomId())
                     .setGameRule(gameRule)
                     .setFirstDealerId(initialized.getFirstDealerId().getValue()))
                     .build();

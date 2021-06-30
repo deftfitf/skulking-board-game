@@ -1,4 +1,9 @@
-import {Card, GameEvent} from "../proto/GameServerService_pb";
+import {Card, GameEvent, GameRule as ProtoGameRule} from "../proto/GameServerService_pb";
+
+export const snapshotToGameState = (snapshot: GameEvent.GameSnapshot) => {
+  return new WaitForInitialize(() => {
+  });
+}
 
 export enum DeckType {
   STANDARD,
@@ -63,6 +68,58 @@ event: GameEvent.RoundStarted
   null, 1,
   scoreBoard
   );
+}
+
+export class WaitForInitialize implements GameState {
+
+  constructor(
+  private readonly onCreated: (gameRoomId: string) => void
+  ) {
+  }
+
+  applyEvent(event: GameEvent): GameState {
+    switch (event.getEventCase()) {
+      case GameEvent.EventCase.INITIALIZED:
+        const initialized = event.getInitialized()!;
+        const _gameRule = initialized.getGameRule()!;
+        let deckType: DeckType;
+        switch (_gameRule.getDeckType()) {
+          case ProtoGameRule.DeckType.STANDARD:
+            deckType = DeckType.STANDARD;
+            break;
+          case ProtoGameRule.DeckType.EXPANSION:
+            deckType = DeckType.EXPANSION;
+            break;
+          default:
+            throw new Error();
+        }
+        const gameRule: GameRule = {
+          roomSize: _gameRule.getRoomSize(),
+          nOfRounds: _gameRule.getNOfRounds(),
+          deckType: deckType
+        }
+
+        return new StartPhase(
+        initialized.getFirstDealerId(),
+        new GameEventStack(),
+        gameRule,
+        initialized.getFirstDealerId(),
+        [initialized.getFirstDealerId()]
+        );
+
+      case GameEvent.EventCase.GAME_SNAPSHOT:
+        const snapshot = event.getGameSnapshot()!;
+        return snapshotToGameState(snapshot);
+
+      default:
+        return this;
+    }
+  }
+
+  getGameEvents(): string[] {
+    return [];
+  }
+
 }
 
 export class StartPhase implements GameState {
@@ -329,6 +386,8 @@ export class NextTrickLeadPlayerChangingPhase implements GameState {
   }
 
   applyEvent(event: GameEvent): GameState {
+    this.gameState.eventStack.appendGameEvent(event);
+
     switch (event.getEventCase()) {
       case GameEvent.EventCase.NEXT_TRICK_LEAD_PLAYER_CHANGED:
         const changed = event.getNextTrickLeadPlayerChanged()!;
@@ -355,6 +414,8 @@ export class HandChangeWaitingPhase implements GameState {
   }
 
   applyEvent(event: GameEvent): GameState {
+    this.gameState.eventStack.appendGameEvent(event);
+
     switch (event.getEventCase()) {
       case GameEvent.EventCase.PLAYER_HAND_CHANGED:
         const handChanged = event.getPlayerHandChanged()!;
@@ -409,6 +470,8 @@ export class BidDeclareChangeWaitingPhase implements GameState {
   }
 
   applyEvent(event: GameEvent): GameState {
+    this.gameState.eventStack.appendGameEvent(event);
+
     switch (event.getEventCase()) {
       case GameEvent.EventCase.BID_DECLARE_CHANGED:
         const bidDeclareChanged = event.getBidDeclareChanged()!;
@@ -441,6 +504,8 @@ export class FinishedPhase implements GameState {
   }
 
   applyEvent(event: GameEvent): GameState {
+    this.eventStack.appendGameEvent(event);
+
     switch (event.getEventCase()) {
       case GameEvent.EventCase.GAME_ENDED:
         return new GameEnded();
