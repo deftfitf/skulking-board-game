@@ -1,9 +1,7 @@
 import {Card, GameEvent, GameRule as ProtoGameRule} from "../proto/GameServerService_pb";
+import {scoreBoardAdapter, snapshotToGameState} from "./GameModelAdapter";
 
-export const snapshotToGameState = (snapshot: GameEvent.GameSnapshot) => {
-  return new WaitForInitialize(() => {
-  });
-}
+export type ScoreBoard = Map<string, { score: number, bonus: number }>[];
 
 export enum DeckType {
   STANDARD,
@@ -50,12 +48,13 @@ myPlayerId: string,
 eventStack: GameEventStack,
 gameRule: GameRule,
 roomOwnerId: string,
-scoreBoard: Map<string, { score: number, bonus: number }>[],
+scoreBoard: ScoreBoard,
 event: GameEvent.RoundStarted
 ) => {
   const biddingPlayers = event.getJoinedPlayersList()
   .map(player => ({
     playerId: player.getPlayerId(),
+    isBid: false,
     card: player.getCard()
   }));
 
@@ -73,7 +72,8 @@ event: GameEvent.RoundStarted
 export class WaitForInitialize implements GameState {
 
   constructor(
-  private readonly onCreated: (gameRoomId: string) => void
+  private readonly onCreated: (gameRoomId: string) => void,
+  private readonly gameRoomId?: string
   ) {
   }
 
@@ -109,7 +109,7 @@ export class WaitForInitialize implements GameState {
 
       case GameEvent.EventCase.GAME_SNAPSHOT:
         const snapshot = event.getGameSnapshot()!;
-        return snapshotToGameState(snapshot);
+        return snapshotToGameState(this.gameRoomId!, snapshot.getGameState()!);
 
       default:
         return this;
@@ -169,6 +169,7 @@ export class StartPhase implements GameState {
 
 export type BiddingPlayer = {
   readonly playerId: string;
+  readonly isBid: boolean;
   readonly card: number;
 }
 
@@ -185,7 +186,7 @@ export class BiddingPhase implements GameState {
   readonly myCardIds: string[],
   private myBid: number | null,
   private round: number,
-  readonly scoreBoard: Map<string, { score: number, bonus: number }>[]
+  readonly scoreBoard: ScoreBoard
   ) {
   }
 
@@ -257,7 +258,7 @@ export class TrickPhase implements GameState {
   readonly mustFollow: MustFollow | null,
   readonly field: { playerId: string, card: Card }[],
   readonly trick: number,
-  readonly scoreBoard: Map<string, { score: number, bonus: number }>[],
+  readonly scoreBoard: ScoreBoard,
   ) {
   }
 
@@ -330,19 +331,7 @@ export class TrickPhase implements GameState {
 
       case GameEvent.EventCase.GAME_FINISHED:
         const gameFinished = event.getGameFinished()!;
-        const gameScore: Map<string, { score: number, bonus: number }>[] = [];
-
-        gameFinished.getScoreBoard()!
-        .getRoundScoresList()
-        .forEach(roundScore => {
-          const roundScoreMap = new Map<string, { score: number, bonus: number }>();
-          roundScore.getRoundScoreMap().forEach((score, key) => {
-            roundScoreMap.set(key, {
-              score: score.getScore(),
-              bonus: score.getBonus(),
-            });
-          });
-        });
+        const gameScore: ScoreBoard = scoreBoardAdapter(gameFinished.getScoreBoard()!);
 
         return new FinishedPhase(
         this.myPlayerId, this, this.eventStack, this.rule,
@@ -499,7 +488,7 @@ export class FinishedPhase implements GameState {
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
   readonly winnerId: string,
-  readonly gameScore: Map<string, { score: number, bonus: number }>[],
+  readonly gameScore: ScoreBoard,
   ) {
   }
 
