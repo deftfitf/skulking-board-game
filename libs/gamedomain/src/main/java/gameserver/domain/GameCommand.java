@@ -16,8 +16,8 @@ public interface GameCommand extends CborSerializable {
     @Builder
     class Init implements GameCommand {
         @NonNull PlayerId firstDealerId;
-        @NonNull ActorRef<GameEvent> firstDealerRef;
         @NonNull GameRule gameRule;
+        @NonNull ActorRef<GameEvent.Initialized> response;
 
         @Override
         public PlayerId callerId() {

@@ -54,15 +54,8 @@ public class GameRoomActorTest {
         final var gameRule = new GameRule(5, 3, GameRule.DeckType.STANDARD);
 
         final var init = GameCommand.Init.builder()
-                .gameRule(gameRule).firstDealerId(dealer).firstDealerRef(probe.getRef()).build();
+                .gameRule(gameRule).firstDealerId(dealer).response(probe.getRef().narrow()).build();
         gameRoom.tell(init);
-
-        final var connectionEstablished = probe.receiveMessage();
-        assertThat(connectionEstablished)
-                .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.ConnectionEstablished.class))
-                .satisfies(e -> {
-                    assertThat(e.getPlayerId()).isEqualTo(dealer);
-                });
 
         final var initialized = probe.receiveMessage();
         assertThat(initialized)
@@ -72,14 +65,6 @@ public class GameRoomActorTest {
                     assertThat(e.getFirstDealerId()).isEqualTo(dealer);
                     assertThat(e.getGameRule()).isEqualTo(gameRule);
                 });
-
-        final var joined = probe.receiveMessage();
-        final var expected = GameEvent.APlayerJoined.builder()
-                .playerId(dealer)
-                .build();
-        assertThat(joined)
-                .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.APlayerJoined.class))
-                .isEqualTo(expected);
 
         verify(dao, times(1)).putNewRoom(any());
     }

@@ -59,9 +59,13 @@ public class CardAdapter {
             bldr.setBahijiTheBandit(gameserver.service.grpc.Card.BahijiTheBandit.newBuilder().build());
         } else if (card instanceof Card.RascalOfRoatan) {
             final var rascal = (Card.RascalOfRoatan) card;
-            bldr.setRascalOfRoatan(gameserver.service.grpc.Card.RascalOfRoatan.newBuilder()
-                    .setBetScore(rascal.getBetScore())
-                    .build());
+            final var rascalBldr = gameserver.service.grpc.Card.RascalOfRoatan.newBuilder();
+            if (rascal.getBetScore() != null) {
+                rascalBldr.setBetScore(rascal.getBetScore());
+            } else {
+                rascalBldr.setBetScore(-1);
+            }
+            bldr.setRascalOfRoatan(rascalBldr.build());
         } else if (card instanceof Card.JuanitaJade) {
             bldr.setJanitaJade(gameserver.service.grpc.Card.JanitaJade.newBuilder().build());
         } else if (card instanceof Card.HarryTheGiant) {
@@ -70,9 +74,11 @@ public class CardAdapter {
             bldr.setStandardEscape(gameserver.service.grpc.Card.StandardEscape.newBuilder().build());
         } else if (card instanceof Card.Tigress) {
             final var tigress = (Card.Tigress) card;
-            bldr.setTigress(gameserver.service.grpc.Card.Tigress.newBuilder()
-                    .setIsPirates(tigress.getIsPirates())
-                    .build());
+            final var tigressBldr = gameserver.service.grpc.Card.Tigress.newBuilder();
+            if (tigress.getIsPirates() != null) {
+                tigressBldr.setIsPirates(tigress.getIsPirates());
+            }
+            bldr.setTigress(tigressBldr.build());
         } else if (card instanceof Card.Skulking) {
             bldr.setSkulking(gameserver.service.grpc.Card.Skulking.newBuilder().build());
         } else if (card instanceof Card.Mermaid) {

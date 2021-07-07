@@ -16,19 +16,22 @@ public class GameEventAdapter {
     private final ScoreBoardAdapter scoreBoardAdapter;
     private final GameStateAdapter gameStateAdapter;
 
+    public gameserver.service.grpc.Initialized adapt(GameEvent _gameEvent) {
+        final var initialized = (GameEvent.Initialized) _gameEvent;
+        final var gameRule = gameRuleAdapter.adapt(initialized.getGameRule());
+
+        return gameserver.service.grpc.Initialized.newBuilder()
+                .setGameRoomId(initialized.getGameRoomId())
+                .setGameRule(gameRule)
+                .setFirstDealerId(initialized.getFirstDealerId().getValue())
+                .build();
+    }
+
     public @Nullable
     gameserver.service.grpc.GameEvent adapt(PlayerId playerId, GameEvent _gameEvent) {
         final var bldr = gameserver.service.grpc.GameEvent.newBuilder();
 
-        if (_gameEvent instanceof GameEvent.Initialized) {
-            final var initialized = (GameEvent.Initialized) _gameEvent;
-            final var gameRule = gameRuleAdapter.adapt(initialized.getGameRule());
-            bldr.setInitialized(gameserver.service.grpc.GameEvent.Initialized.newBuilder()
-                    .setGameRoomId(initialized.getGameRoomId())
-                    .setGameRule(gameRule)
-                    .setFirstDealerId(initialized.getFirstDealerId().getValue()))
-                    .build();
-        } else if (_gameEvent instanceof GameEvent.ConnectionEstablished) {
+        if (_gameEvent instanceof GameEvent.ConnectionEstablished) {
             final var connectionEstablished = (GameEvent.ConnectionEstablished) _gameEvent;
             if (!connectionEstablished.getPlayerId().equals(playerId)) {
                 return null;
@@ -224,7 +227,7 @@ public class GameEventAdapter {
             bldr.setGameEnded(gameserver.service.grpc.GameEvent.GameEnded.newBuilder().build());
         } else if (_gameEvent instanceof GameEvent.GameSnapshot) {
             final var snapshot = (GameEvent.GameSnapshot) _gameEvent;
-            final var state = gameStateAdapter.adapt(snapshot.getGameState());
+            final var state = gameStateAdapter.adapt(snapshot.getGameRoomId(), playerId, snapshot.getGameState());
             bldr.setGameSnapshot(gameserver.service.grpc.GameEvent.GameSnapshot.newBuilder()
                     .setGameState(state));
         } else if (_gameEvent instanceof GameEvent.GameException) {

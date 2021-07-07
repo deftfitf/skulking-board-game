@@ -1,5 +1,12 @@
 import axios, {AxiosError, AxiosInstance} from "axios";
-import {GamePlayer, GameRoom, GetGameRoomsRequest, UserRegisterRequest, UserRegisterResponse} from "../models/Models";
+import {
+  GamePlayer,
+  GameRoom,
+  GameRoomCreateRequest,
+  GetGameRoomsRequest,
+  UserRegisterRequest,
+  UserRegisterResponse
+} from "../models/Models";
 
 export class GameServerApiClient {
 
@@ -24,6 +31,10 @@ export class GameServerApiClient {
 
   register: (userRegisterRequest: UserRegisterRequest) => Promise<UserRegisterResponse> = async (request) => {
     return await this.post("/players/register", request);
+  }
+
+  createGameRoom: (request: GameRoomCreateRequest) => Promise<string> = async (request) => {
+    return await this.post("/gamerooms/create", request);
   }
 
   getGameRoom: (gameRoomId: string) => Promise<GameRoom> = async (gameRoomId) => {

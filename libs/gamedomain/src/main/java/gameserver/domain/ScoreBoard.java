@@ -1,5 +1,6 @@
 package gameserver.domain;
 
+import akka.serialization.jackson.CborSerializable;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
@@ -13,7 +14,7 @@ import java.util.Map;
 @Value
 @NoArgsConstructor(force = true, access = AccessLevel.PRIVATE)
 @AllArgsConstructor
-public class ScoreBoard {
+public class ScoreBoard implements CborSerializable {
     List<Map<PlayerId, Score>> roundScores;
 
     public void addRoundScore(Map<PlayerId, Score> playerIdScoreMap) {

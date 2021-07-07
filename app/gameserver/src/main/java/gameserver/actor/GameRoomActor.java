@@ -21,7 +21,6 @@ import gameserver.query.GameRoomQueryAdapter;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -141,33 +140,25 @@ public class GameRoomActor
     }
 
     private Effect<GameEvent, GameState> onInit(GameCommand.Init init) {
-        final var events = List.of(
-                GameEvent.Initialized.builder()
-                        .gameRoomId(gameRoomId)
-                        .gameRule(init.getGameRule())
-                        .firstDealerId(init.getFirstDealerId())
-                        .build(),
-                GameEvent.APlayerJoined.builder()
-                        .playerId(init.getFirstDealerId())
-                        .build());
-
+        final var initialized = GameEvent.Initialized.builder()
+                .gameRoomId(gameRoomId)
+                .gameRule(init.getGameRule())
+                .firstDealerId(init.getFirstDealerId())
+                .build();
         return Effect()
-                .persist(events)
+                .persist(initialized)
                 .thenRun(newState -> {
-                    addConnection(init.getFirstDealerId(), init.getFirstDealerRef());
-
                     final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, newState);
                     gameRoomDynamoDBDao.putNewRoom(gameRoom);
-
-                    events.forEach(this::broadcast);
-                });
+                })
+                .thenReply(init.getResponse(), notUsed -> initialized);
     }
 
     private Effect<GameEvent, GameState> onNewConnection(GameState state, GameCommand.NewConnection connection) {
         return Effect().none()
                 .thenRun(newState -> {
                     addConnection(connection.getPlayerId(), connection.getPlayerRef());
-                    narrowcast(connection.getPlayerId(), GameEvent.GameSnapshot.builder().gameState(newState).build());
+                    narrowcast(connection.getPlayerId(), GameEvent.GameSnapshot.builder().gameRoomId(gameRoomId).gameState(newState).build());
                 });
     }
 
@@ -198,7 +189,7 @@ public class GameRoomActor
         return Effect().none()
                 .thenRun((newState) -> narrowcast(
                         snapshotRequest.getPlayerId(),
-                        GameEvent.GameSnapshot.builder().gameState(newState).build()));
+                        GameEvent.GameSnapshot.builder().gameRoomId(gameRoomId).gameState(newState).build()));
     }
 
     private Effect<GameEvent, GameState> whenInvalidInput(InputCheckResult.InvalidInput invalidInput, PlayerId sender) {
@@ -234,7 +225,7 @@ public class GameRoomActor
                         final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, newState);
                         gameRoomDynamoDBDao.updateRoom(gameRoom);
 
-                        narrowcast(joined.getPlayerId(), GameEvent.GameSnapshot.builder().gameState(newState).build());
+                        narrowcast(joined.getPlayerId(), GameEvent.GameSnapshot.builder().gameRoomId(gameRoomId).gameState(newState).build());
                         broadcast(joined);
                     });
 

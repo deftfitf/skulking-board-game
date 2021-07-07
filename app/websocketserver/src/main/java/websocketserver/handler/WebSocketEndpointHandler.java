@@ -38,13 +38,14 @@ public class WebSocketEndpointHandler implements WebSocketHandler {
         final var gameCommandWithPrincipal = playerIdMono.flux()
                 .flatMap(playerId -> session.receive()
                         .map(wsMessage -> {
-                            log.info("hoge: {}, {}", playerId, wsMessage);
                             try {
-                                return GameCommand
+                                final var command = GameCommand
                                         .parseFrom(wsMessage.getPayload().asInputStream())
                                         .toBuilder()
                                         .setPlayerId(playerId)
                                         .build();
+                                log.info("hoge: {}, {}", playerId, command);
+                                return command;
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }

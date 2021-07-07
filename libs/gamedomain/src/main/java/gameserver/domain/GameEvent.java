@@ -262,6 +262,7 @@ public interface GameEvent extends CborSerializable {
     @Value
     @Builder
     public static class GameSnapshot implements GameEvent {
+        @NonNull String gameRoomId;
         @NonNull GameState gameState;
     }
 

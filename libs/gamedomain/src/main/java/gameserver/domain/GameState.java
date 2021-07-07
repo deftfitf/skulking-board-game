@@ -13,6 +13,8 @@ public interface GameState extends CborSerializable {
 
     PlayerId getRoomOwnerId();
 
+    GameRule getRule();
+
     GameStateType getStateName();
 
     List<PlayerId> getPlayerIds();
@@ -92,7 +94,6 @@ public interface GameState extends CborSerializable {
 
         public static StartPhase empty(GameRule gameRule, PlayerId playerId) {
             final var playerIds = new ArrayList<PlayerId>();
-            playerIds.add(playerId);
             return StartPhase.builder()
                     .rule(gameRule)
                     .dealerId(playerId)
@@ -622,6 +623,11 @@ public interface GameState extends CborSerializable {
         }
 
         @Override
+        public GameRule getRule() {
+            return trickPhase.getRule();
+        }
+
+        @Override
         public List<PlayerId> getPlayerIds() {
             return trickPhase.getPlayerIds();
         }
@@ -659,6 +665,11 @@ public interface GameState extends CborSerializable {
         @Override
         public PlayerId getRoomOwnerId() {
             return trickPhase.getRoomOwnerId();
+        }
+
+        @Override
+        public GameRule getRule() {
+            return trickPhase.getRule();
         }
 
         @Override
@@ -709,6 +720,11 @@ public interface GameState extends CborSerializable {
         }
 
         @Override
+        public GameRule getRule() {
+            return trickPhase.getRule();
+        }
+
+        @Override
         public GameStateType getStateName() {
             return GameStateType.GAME_PLAYING;
         }
@@ -735,6 +751,11 @@ public interface GameState extends CborSerializable {
         @Override
         public PlayerId getRoomOwnerId() {
             return trickPhase.getRoomOwnerId();
+        }
+
+        @Override
+        public GameRule getRule() {
+            return trickPhase.getRule();
         }
 
         @Override

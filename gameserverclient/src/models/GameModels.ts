@@ -1,4 +1,4 @@
-import {Card, GameEvent, GameRule as ProtoGameRule} from "../proto/GameServerService_pb";
+import {Card, GameEvent} from "../proto/GameServerService_pb";
 import {scoreBoardAdapter, snapshotToGameState} from "./GameModelAdapter";
 
 export type ScoreBoard = Map<string, { score: number, bonus: number }>[];
@@ -39,11 +39,15 @@ export interface GameState {
 
   getGameEvents(): string[];
 
+  getDeck(): Map<string, Card>;
+
   applyEvent(event: GameEvent): GameState;
 
 }
 
 const createBiddingPhase = (
+deck: Map<string, Card>,
+gameRoomId: string,
 myPlayerId: string,
 eventStack: GameEventStack,
 gameRule: GameRule,
@@ -59,6 +63,8 @@ event: GameEvent.RoundStarted
   }));
 
   return new BiddingPhase(
+  deck,
+  gameRoomId,
   myPlayerId,
   eventStack, gameRule,
   roomOwnerId, roomOwnerId,
@@ -72,44 +78,20 @@ event: GameEvent.RoundStarted
 export class WaitForInitialize implements GameState {
 
   constructor(
-  private readonly onCreated: (gameRoomId: string) => void,
-  private readonly gameRoomId?: string
+  private readonly gameRoomId: string,
+  private readonly myPlayerId: string,
   ) {
+  }
+
+  getDeck(): Map<string, Card> {
+    throw new Error("Method not implemented.");
   }
 
   applyEvent(event: GameEvent): GameState {
     switch (event.getEventCase()) {
-      case GameEvent.EventCase.INITIALIZED:
-        const initialized = event.getInitialized()!;
-        const _gameRule = initialized.getGameRule()!;
-        let deckType: DeckType;
-        switch (_gameRule.getDeckType()) {
-          case ProtoGameRule.DeckType.STANDARD:
-            deckType = DeckType.STANDARD;
-            break;
-          case ProtoGameRule.DeckType.EXPANSION:
-            deckType = DeckType.EXPANSION;
-            break;
-          default:
-            throw new Error();
-        }
-        const gameRule: GameRule = {
-          roomSize: _gameRule.getRoomSize(),
-          nOfRounds: _gameRule.getNOfRounds(),
-          deckType: deckType
-        }
-
-        return new StartPhase(
-        initialized.getFirstDealerId(),
-        new GameEventStack(),
-        gameRule,
-        initialized.getFirstDealerId(),
-        [initialized.getFirstDealerId()]
-        );
-
       case GameEvent.EventCase.GAME_SNAPSHOT:
         const snapshot = event.getGameSnapshot()!;
-        return snapshotToGameState(this.gameRoomId!, snapshot.getGameState()!);
+        return snapshotToGameState(this.myPlayerId, snapshot.getGameState()!);
 
       default:
         return this;
@@ -125,6 +107,8 @@ export class WaitForInitialize implements GameState {
 export class StartPhase implements GameState {
 
   constructor(
+  readonly deck: Map<string, Card>,
+  readonly gameRoomId: string,
   readonly myPlayerId: string,
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
@@ -140,13 +124,23 @@ export class StartPhase implements GameState {
       case GameEvent.EventCase.A_PLAYER_JOINED:
         const aPlayerJoined = event.getAPlayerJoined()!;
 
-        this.playerIds.push(aPlayerJoined.getPlayerId())
-        return this;
+        if (!this.playerIds.includes(aPlayerJoined.getPlayerId())) {
+          this.playerIds.push(aPlayerJoined.getPlayerId())
+        }
+        return new StartPhase(
+        this.deck,
+        this.gameRoomId,
+        this.myPlayerId,
+        this.eventStack, this.rule, this.roomOwnerId,
+        this.playerIds
+        );
 
       case GameEvent.EventCase.A_PLAYER_LEFT:
         const aPlayerLeft = event.getAPlayerLeft()!;
 
         return new StartPhase(
+        this.deck,
+        this.gameRoomId,
         this.myPlayerId,
         this.eventStack, this.rule, this.roomOwnerId,
         this.playerIds.filter(id => aPlayerLeft.getPlayerId() !== id)
@@ -154,6 +148,8 @@ export class StartPhase implements GameState {
 
       case GameEvent.EventCase.ROUND_STARTED:
         return createBiddingPhase(
+        this.deck,
+        this.gameRoomId,
         this.myPlayerId, this.eventStack, this.rule,
         this.roomOwnerId, [], event.getRoundStarted()!
         );
@@ -164,6 +160,14 @@ export class StartPhase implements GameState {
   }
 
   getGameEvents = this.eventStack.getGameEvents;
+
+  isMeRoomOwner = this.roomOwnerId == this.myPlayerId;
+
+  canStartGame = this.playerIds.length >= 2;
+
+  getDeck(): Map<string, Card> {
+    return this.deck;
+  }
 
 }
 
@@ -176,6 +180,8 @@ export type BiddingPlayer = {
 export class BiddingPhase implements GameState {
 
   constructor(
+  readonly deckMap: Map<string, Card>,
+  readonly gameRoomId: string,
   readonly myPlayerId: string,
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
@@ -184,8 +190,8 @@ export class BiddingPhase implements GameState {
   readonly deck: number,
   readonly players: BiddingPlayer[],
   readonly myCardIds: string[],
-  private myBid: number | null,
-  private round: number,
+  public myBid: number | null,
+  readonly round: number,
   readonly scoreBoard: ScoreBoard
   ) {
   }
@@ -198,7 +204,7 @@ export class BiddingPhase implements GameState {
         const bidDeclared = event.getAPlayerBidDeclared()!;
         this.myBid = bidDeclared.getBidDeclared();
 
-        return this;
+        return Object.create(this);
 
       case GameEvent.EventCase.TRICK_STARTED:
         const trickStarted = event.getTrickStarted()!;
@@ -212,7 +218,8 @@ export class BiddingPhase implements GameState {
         }));
 
         return new TrickPhase(
-        this.myPlayerId,
+        this.deckMap,
+        this.gameRoomId, this.myPlayerId,
         this.eventStack, this.rule, this.roomOwnerId, this.round, this.dealerId,
         trickingPlayers, this.myCardIds, this.deck,
         0, null, [], 1, this.scoreBoard
@@ -224,6 +231,10 @@ export class BiddingPhase implements GameState {
   }
 
   getGameEvents = this.eventStack.getGameEvents;
+
+  getDeck(): Map<string, Card> {
+    return this.deckMap;
+  }
 
 }
 
@@ -245,6 +256,8 @@ export enum MustFollow {
 export class TrickPhase implements GameState {
 
   constructor(
+  readonly deckMap: Map<string, Card>,
+  readonly gameRoomId: string,
   readonly myPlayerId: string,
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
@@ -252,7 +265,7 @@ export class TrickPhase implements GameState {
   readonly round: number,
   private dealerId: string,
   readonly players: TrickingPlayer[],
-  private myCardIds: string[],
+  public myCardIds: string[],
   readonly deck: number,
   readonly stack: number,
   readonly mustFollow: MustFollow | null,
@@ -280,7 +293,9 @@ export class TrickPhase implements GameState {
           card: played.getPlayedCard()!
         });
 
-        return this;
+        this.dealerId = this.players[(idx + 1) % this.players.length].playerId;
+
+        return Object.create(this);
 
       case GameEvent.EventCase.NEXT_TRICK_LEAD_PLAYER_CHANGEABLE_NOTICE:
         const nextTrickLeadPlayerChangeableNotice = event.getNextTrickLeadPlayerChangeableNotice()!;
@@ -306,9 +321,7 @@ export class TrickPhase implements GameState {
         const declareBidChangeAvailable = event.getDeclareBidChangeAvailable()!;
 
         return new BidDeclareChangeWaitingPhase(this,
-        declareBidChangeAvailable.getPlayerId(),
-        declareBidChangeAvailable.getMax(),
-        declareBidChangeAvailable.getMin());
+        declareBidChangeAvailable.getPlayerId());
 
       case GameEvent.EventCase.ROUND_FINISHED:
         const roundFinished = event.getRoundFinished()!;
@@ -325,6 +338,8 @@ export class TrickPhase implements GameState {
 
       case GameEvent.EventCase.ROUND_STARTED:
         return createBiddingPhase(
+        this.deckMap,
+        this.gameRoomId,
         this.myPlayerId, this.eventStack, this.rule,
         this.roomOwnerId, this.scoreBoard, event.getRoundStarted()!
         );
@@ -334,7 +349,9 @@ export class TrickPhase implements GameState {
         const gameScore: ScoreBoard = scoreBoardAdapter(gameFinished.getScoreBoard()!);
 
         return new FinishedPhase(
-        this.myPlayerId, this, this.eventStack, this.rule,
+        this.deckMap,
+        this.gameRoomId,
+        this.myPlayerId, this.roomOwnerId, this.eventStack, this.rule,
         gameFinished.getGameWinnerId(), gameScore
         );
 
@@ -352,6 +369,8 @@ export class TrickPhase implements GameState {
   removeMyCards = (cards: string[]) =>
   this.myCardIds = this.myCardIds.filter(cardId => cards.includes(cardId));
 
+  isMyTurn = () => this.myPlayerId === this.dealerId;
+
   changeBidDeclare = (playerId: string, newBid: number) => {
     const idx = this.players.findIndex(player => player.playerId == playerId);
     this.players[idx] = {
@@ -363,6 +382,11 @@ export class TrickPhase implements GameState {
   getDealerId = () => this.dealerId;
 
   getMyCardIds = () => [...this.myCardIds];
+
+  getDeck(): Map<string, Card> {
+    return this.deckMap;
+  }
+
 
 }
 
@@ -390,6 +414,10 @@ export class NextTrickLeadPlayerChangingPhase implements GameState {
   }
 
   getGameEvents = this.gameState.eventStack.getGameEvents;
+
+  getDeck(): Map<string, Card> {
+    return this.gameState.deckMap;
+  }
 
 }
 
@@ -423,6 +451,9 @@ export class HandChangeWaitingPhase implements GameState {
 
   getGameEvents = this.gameState.eventStack.getGameEvents;
 
+  getDeck(): Map<string, Card> {
+    return this.gameState.deckMap;
+  }
 }
 
 export class FuturePredicateWaitingPhase implements GameState {
@@ -446,15 +477,17 @@ export class FuturePredicateWaitingPhase implements GameState {
 
   getGameEvents = this.gameState.eventStack.getGameEvents;
 
+  getDeck(): Map<string, Card> {
+    return this.gameState.deckMap;
+  }
+
 }
 
 export class BidDeclareChangeWaitingPhase implements GameState {
 
   constructor(
   readonly gameState: TrickPhase,
-  readonly changingPlayerId: string,
-  readonly max: number,
-  readonly min: number,
+  readonly changingPlayerId: string
   ) {
   }
 
@@ -478,13 +511,18 @@ export class BidDeclareChangeWaitingPhase implements GameState {
 
   getGameEvents = this.gameState.eventStack.getGameEvents;
 
+  getDeck(): Map<string, Card> {
+    return this.gameState.deckMap;
+  }
 }
 
 export class FinishedPhase implements GameState {
 
   constructor(
+  readonly deck: Map<string, Card>,
+  readonly gameRoomId: string,
   readonly myPlayerId: string,
-  readonly lastState: TrickPhase,
+  readonly roomOwnerId: string,
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
   readonly winnerId: string,
@@ -501,8 +539,10 @@ export class FinishedPhase implements GameState {
 
       case GameEvent.EventCase.ROUND_STARTED:
         return createBiddingPhase(
+        this.deck,
+        this.gameRoomId,
         this.myPlayerId, this.eventStack, this.rule,
-        this.lastState.roomOwnerId, [], event.getRoundStarted()!
+        this.roomOwnerId, [], event.getRoundStarted()!
         );
 
       default:
@@ -511,6 +551,10 @@ export class FinishedPhase implements GameState {
   }
 
   getGameEvents = this.eventStack.getGameEvents;
+
+  getDeck(): Map<string, Card> {
+    return this.deck;
+  }
 
 }
 
@@ -522,6 +566,11 @@ export class GameEnded implements GameState {
 
   getGameEvents(): string[] {
     return [];
+  }
+
+
+  getDeck(): Map<string, Card> {
+    return new Map();
   }
 
 }

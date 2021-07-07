@@ -1,13 +1,14 @@
 package gameserver.domain;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.RequiredArgsConstructor;
+import lombok.Value;
 
 import java.util.LinkedList;
 
 @Value
 @Builder
-@NoArgsConstructor(force = true, access = AccessLevel.PRIVATE)
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class GameRule {
     public static final int ROOM_MIN_SIZE = 2;
     public static final int ROOM_MAX_MAX_SIZE = 6;

@@ -20,7 +20,7 @@ public class GameEventAdapterTest {
                     new ScoreBoardAdapter()));
 
     @Test
-    public void adapt() {
+    public void adaptInit() {
         {
             final var event = GameEvent.Initialized.builder()
                     .gameRoomId("gameRoom1")
@@ -28,16 +28,20 @@ public class GameEventAdapterTest {
                     .gameRule(new GameRule(1, 2, GameRule.DeckType.EXPANSION))
                     .build();
 
-            assertThat(adapter.adapt(new PlayerId("player1"), event)).satisfies(actual -> {
-                assertThat(actual.getInitialized()).isNotNull();
-                assertThat(actual.getInitialized().getGameRoomId()).isEqualTo("gameRoom1");
-                assertThat(actual.getInitialized().getFirstDealerId()).isEqualTo("player1");
-                assertThat(actual.getInitialized().getGameRule()).isNotNull();
-                assertThat(actual.getInitialized().getGameRule().getRoomSize()).isEqualTo(1);
-                assertThat(actual.getInitialized().getGameRule().getNOfRounds()).isEqualTo(2);
-                assertThat(actual.getInitialized().getGameRule().getDeckType()).isEqualTo(gameserver.service.grpc.GameRule.DeckType.EXPANSION);
+            assertThat(adapter.adapt(event)).satisfies(actual -> {
+                assertThat(actual).isNotNull();
+                assertThat(actual.getGameRoomId()).isEqualTo("gameRoom1");
+                assertThat(actual.getFirstDealerId()).isEqualTo("player1");
+                assertThat(actual.getGameRule()).isNotNull();
+                assertThat(actual.getGameRule().getRoomSize()).isEqualTo(1);
+                assertThat(actual.getGameRule().getNOfRounds()).isEqualTo(2);
+                assertThat(actual.getGameRule().getDeckType()).isEqualTo(gameserver.service.grpc.GameRule.DeckType.EXPANSION);
             });
         }
+    }
+
+    @Test
+    public void adapt() {
         {
             final var event = GameEvent.ConnectionEstablished.builder()
                     .playerId(new PlayerId("player1"))

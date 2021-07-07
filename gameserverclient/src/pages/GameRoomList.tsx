@@ -88,17 +88,18 @@ const GameRoomCreateDialog = (props: { open: boolean, setOpen: (p: boolean) => v
   const [deckType, setDeckType] = useState<"STANDARD" | "EXPANSION">("STANDARD");
 
   const createRoom = () => {
-    history.push({
-      pathname: `/gamerooms/create`,
-      state: {
-        createRequest: {
-          roomSize: roomSize,
-          nOfRounds: nOfRounds,
-          deckType: deckType,
-        },
-        isReConnect: false
-      }
-    })
+    gameServerApiClient.createGameRoom({
+      roomSize: roomSize,
+      nOfRounds: nOfRounds,
+      deckType: deckType,
+    }).then(gameRoomId => {
+      history.push({
+        pathname: `/gamerooms/${gameRoomId}`,
+        state: {
+          isJoin: true
+        }
+      })
+    });
   }
 
   const createRoomDialogClose = () => {
@@ -185,7 +186,6 @@ const GameRoomList = (props: { gamePlayer: GamePlayer }) => {
   const beforeKey = (key: string) =>
   key.slice(0, -1) + String.fromCharCode((key.charCodeAt(key.length - 1) - 1))
 
-  // TODO: Game Room作成時の接続の挙動に問題があるので修正する
   return (
   <section className={classes.root}>
     <Container>
@@ -220,8 +220,7 @@ const GameRoomList = (props: { gamePlayer: GamePlayer }) => {
               onClick={() => history.push({
                 pathname: `/gamerooms/${gameRoom.gameRoomId}`,
                 state: {
-                  playerId: props.gamePlayer.playerId,
-                  isReConnect: gameRoom.joinedPlayerIds.includes(props.gamePlayer.playerId)
+                  isJoin: !gameRoom.joinedPlayerIds.includes(props.gamePlayer.playerId)
                 }
               })}
               >

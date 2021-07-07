@@ -1,4 +1,3 @@
-import {GameRoomCreateRequest} from "../models/Models";
 import {Card, GameCommand, GameRule} from "../proto/GameServerService_pb";
 
 export class GameServerSocketClient {
@@ -6,18 +5,6 @@ export class GameServerSocketClient {
   constructor(
   private readonly socket: WebSocket
   ) {
-  }
-
-  sendCreateRoom = (request: GameRoomCreateRequest) => {
-    const gameRule = new GameRule()
-    .setRoomSize(request.roomSize)
-    .setNOfRounds(request.nOfRounds)
-    .setDeckType(this.adaptDeckType(request.deckType));
-
-    const initMessage = new GameCommand()
-    .setCreateRoom(new GameCommand.CreateRoom().setGameRule(gameRule));
-
-    this.send(initMessage);
   }
 
   sendJoinRoom = (gameRoomId: string) => {
@@ -112,8 +99,10 @@ export class GameServerSocketClient {
     this.send(snapshotRequestMessage);
   }
 
-  private send = (gameCommand: GameCommand) =>
-  this.socket.send(gameCommand.serializeBinary());
+  private send = (gameCommand: GameCommand) => {
+    console.log(gameCommand.toObject(false));
+    this.socket.send(gameCommand.serializeBinary());
+  }
 
   private newGameCommand = (gameRoomId: string) => {
     return new GameCommand().setGameRoomId(gameRoomId);

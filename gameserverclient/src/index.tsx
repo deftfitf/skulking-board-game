@@ -81,11 +81,23 @@ const App = () => {
   const routes = [
     {
       path: "/gamerooms/new",
-      component: GameRoom
+      render: () => {
+        if (player) {
+          return <GameRoom gamePlayer={player}/>;
+        } else {
+          return <TopPage/>
+        }
+      }
     },
     {
       path: "/gamerooms/:gameRoomId",
-      component: GameRoom
+      render: () => {
+        if (player) {
+          return <GameRoom gamePlayer={player}/>;
+        } else {
+          return <TopPage/>
+        }
+      }
     },
     {
       path: "/players/mypage",
@@ -140,7 +152,7 @@ const App = () => {
       <Container className={classes.container}>
         <Switch>
           {routes.map(route => (
-          <Route {...route} />
+          <Route {...route}/>
           ))}
         </Switch>
       </Container>

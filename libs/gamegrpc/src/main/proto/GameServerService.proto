@@ -7,7 +7,20 @@ option java_outer_classname = "GameServiceProto";
 package gameserver;
 
 service GameServerService {
+    rpc Create (CreateRoom) returns (Initialized) {}
     rpc Connect (stream GameCommand) returns (stream GameEvent) {}
+}
+
+message CreateRoom {
+    string game_room_id = 1;
+    string player_id = 2;
+    GameRule game_rule = 3;
+}
+
+message Initialized {
+    string game_room_id = 1;
+    string first_dealer_id = 2;
+    GameRule game_rule = 3;
 }
 
 message GameCommand {
@@ -28,11 +41,6 @@ message GameCommand {
         EndGame end_game = 13;
         SnapshotRequest snapshot_request = 14;
         NewConnection new_connection = 15;
-        CreateRoom create_room = 16;
-    }
-
-    message CreateRoom {
-        GameRule game_rule = 1;
     }
 
     message NewConnection {
@@ -83,7 +91,6 @@ message GameCommand {
 message GameEvent {
 
     oneof event {
-        Initialized initialized = 1;
         ConnectionEstablished connection_established = 2;
         ConnectionClosed connection_closed = 3;
         APlayerJoined a_player_joined = 4;
@@ -113,12 +120,6 @@ message GameEvent {
         GameSnapshot game_snapshot = 28;
         GameException game_exception = 29;
         KeepAlive keep_alive = 30;
-    }
-
-    message Initialized {
-        string game_room_id = 1;
-        string first_dealer_id = 2;
-        GameRule game_rule = 3;
     }
 
     message ConnectionEstablished {
@@ -383,6 +384,10 @@ message Score {
 }
 
 message GameState {
+    string game_room_id = 10;
+    string room_owner_id = 9;
+    repeated Card deck = 11;
+
     oneof state {
         StartPhase start_phase = 1;
         BiddingPhase bidding_phase = 2;
@@ -403,12 +408,17 @@ message GameState {
     message BiddingPhase {
         GameRule game_rule = 1;
         int32 round = 2;
-        string dealer_id = 3;
-        repeated BiddingPlayer bidding_players = 4;
+        int32 deck = 3;
+        string dealer_id = 4;
+        repeated BiddingPlayer bidding_players = 5;
+        repeated string card = 6;
+        int32 myBid = 7;
+        ScoreBoard score_board = 8;
 
         message BiddingPlayer {
             string player_id = 1;
             bool is_bid = 2;
+            int32 card = 3;
         }
     }
 
@@ -417,16 +427,20 @@ message GameState {
         int32 round = 2;
         string dealer_id = 3;
         repeated TrickPlayer trick_players = 4;
-        repeated PlayedCard field = 7;
+        repeated string card = 5;
         Card.CardColor must_follow = 6;
+        repeated PlayedCard field = 7;
         int32 trick = 8;
         ScoreBoard score_board = 9;
+        int32 deck = 10;
+        int32 stack = 11;
 
         message TrickPlayer {
             string player_id = 1;
             int32 declared_bid = 2;
             int32 took_trick = 3;
             int32 took_bonus = 4;
+            int32 card = 5;
         }
 
         message PlayedCard {
@@ -437,18 +451,22 @@ message GameState {
 
     message NextTrickLeadPlayerChanging {
         string changing_player_id = 1;
+        TrickPhase trick_phase = 2;
     }
 
     message HandChangeWaiting {
         string changing_player_id = 1;
+        TrickPhase trick_phase = 2;
     }
 
     message FuturePredicateWaiting {
         string predicating_player_id = 1;
+        TrickPhase trick_phase = 2;
     }
 
     message BidDeclareChangeWaiting {
         string changing_player_id = 1;
+        TrickPhase trick_phase = 2;
     }
 
     message FinishedPhase {

@@ -1,26 +1,31 @@
 package gameserver.service.impl;
 
+import akka.actor.typed.ActorRef;
 import gameserver.domain.CardId;
 import gameserver.domain.GameCommand;
+import gameserver.domain.GameEvent;
 import gameserver.domain.PlayerId;
 import lombok.RequiredArgsConstructor;
 
 import java.util.stream.Collectors;
 
+// TODO: snapshot制御がうまくいってないぽい
 @RequiredArgsConstructor
 public class GameCommandAdapter {
     private final CardAdapter cardAdapter;
 
-    public GameCommand adapt(gameserver.service.grpc.GameCommand _gameCommand) {
+    public GameCommand adapt(ActorRef<GameEvent> conn, gameserver.service.grpc.GameCommand _gameCommand) {
         final var playerId = new PlayerId(_gameCommand.getPlayerId());
         switch (_gameCommand.getCmdCase()) {
             case JOIN:
                 return GameCommand.Join.builder()
                         .playerId(playerId)
+                        .playerRef(conn)
                         .build();
             case LEAVE:
                 return GameCommand.Leave.builder()
                         .playerId(playerId)
+                        .playerRef(conn)
                         .build();
             case END_GAME:
                 return GameCommand.EndGame.builder()

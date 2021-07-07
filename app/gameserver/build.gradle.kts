@@ -10,7 +10,7 @@ plugins {
 
 application {
     mainClass.set("gameserver.GameServerApplication")
-    applicationDefaultJvmArgs = listOf("-Dconfig.resource=local1.conf")
+    applicationDefaultJvmArgs = listOf("-Dconfig.resource=local2.conf")
 }
 
 dependencies {
