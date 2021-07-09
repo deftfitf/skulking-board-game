@@ -127,7 +127,6 @@ const App = () => {
     gameServerApiClient
     .checkLogin()
     .then(player => {
-      console.log(player);
       setPlayer(player);
     })
     .catch(() => {

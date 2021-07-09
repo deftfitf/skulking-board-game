@@ -1,12 +1,29 @@
 package gameserver.domain;
 
 import akka.serialization.jackson.CborSerializable;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Value;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+@JsonSubTypes({
+        @JsonSubTypes.Type(name = "number_card", value = Card.NumberCard.class),
+        @JsonSubTypes.Type(name = "standard_pirates", value = Card.StandardPirates.class),
+        @JsonSubTypes.Type(name = "roise_d_laney", value = Card.RoiseDLaney.class),
+        @JsonSubTypes.Type(name = "bahij_the_bandit", value = Card.BahijTheBandit.class),
+        @JsonSubTypes.Type(name = "rascal_of_roatan", value = Card.RascalOfRoatan.class),
+        @JsonSubTypes.Type(name = "juanita_jade", value = Card.JuanitaJade.class),
+        @JsonSubTypes.Type(name = "harry_the_giant", value = Card.HarryTheGiant.class),
+        @JsonSubTypes.Type(name = "standard_escape", value = Card.StandardEscape.class),
+        @JsonSubTypes.Type(name = "tigress", value = Card.Tigress.class),
+        @JsonSubTypes.Type(name = "skulking", value = Card.Skulking.class),
+        @JsonSubTypes.Type(name = "mermaid", value = Card.Mermaid.class),
+        @JsonSubTypes.Type(name = "kraken", value = Card.Kraken.class),
+})
 public interface Card extends CborSerializable {
     CardId getCardId();
 

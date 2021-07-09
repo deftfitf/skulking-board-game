@@ -1,6 +1,8 @@
 package gameserver.domain;
 
 import akka.serialization.jackson.CborSerializable;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -9,6 +11,17 @@ import lombok.Value;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+@JsonSubTypes({
+        @JsonSubTypes.Type(name = "start_phase", value = GameState.StartPhase.class),
+        @JsonSubTypes.Type(name = "bidding_phase", value = GameState.BiddingPhase.class),
+        @JsonSubTypes.Type(name = "trick_phase", value = GameState.TrickPhase.class),
+        @JsonSubTypes.Type(name = "next_trick_lead_player_changing", value = GameState.NextTrickLeadPlayerChanging.class),
+        @JsonSubTypes.Type(name = "hand_change_waiting", value = GameState.HandChangeWaiting.class),
+        @JsonSubTypes.Type(name = "future_predicate_waiting", value = GameState.FuturePredicateWaiting.class),
+        @JsonSubTypes.Type(name = "bid_declare_change_waiting", value = GameState.BidDeclareChangeWaiting.class),
+        @JsonSubTypes.Type(name = "finished_phase", value = GameState.FinishedPhase.class),
+})
 public interface GameState extends CborSerializable {
 
     PlayerId getRoomOwnerId();
@@ -773,7 +786,7 @@ public interface GameState extends CborSerializable {
         }
 
         public InputCheckResult canChangeBid(PlayerId playerId, int changeBid) {
-            if (!(changeBid == 1 || changeBid == -1)) {
+            if (!(changeBid >= -1 && changeBid <= 1)) {
                 return InputCheckResult.InvalidInput.builder().invalidInputType(InputCheckResult.InvalidInputType.INVALID_CHANGE_BID_VALUE).build();
             }
 

@@ -70,7 +70,7 @@ event: GameEvent.RoundStarted
   roomOwnerId, roomOwnerId,
   event.getDeck(), biddingPlayers,
   event.getCardList(),
-  null, 1,
+  null, event.getRound(),
   scoreBoard
   );
 }
@@ -196,13 +196,21 @@ export class BiddingPhase implements GameState {
   ) {
   }
 
+  // TODO: bid中の順序, フィールドのリカバリがおかしい
   applyEvent(event: GameEvent): GameState {
     this.eventStack.appendGameEvent(event);
 
     switch (event.getEventCase()) {
       case GameEvent.EventCase.A_PLAYER_BID_DECLARED:
         const bidDeclared = event.getAPlayerBidDeclared()!;
-        this.myBid = bidDeclared.getBidDeclared();
+        if (bidDeclared.getPlayerId() == this.myPlayerId) {
+          this.myBid = bidDeclared.getBidDeclared();
+        }
+        const idx = this.players.findIndex(p => p.playerId == bidDeclared.getPlayerId());
+        this.players[idx] = {
+          ...this.players[idx],
+          isBid: true
+        }
 
         return Object.create(this);
 
@@ -220,7 +228,7 @@ export class BiddingPhase implements GameState {
         return new TrickPhase(
         this.deckMap,
         this.gameRoomId, this.myPlayerId,
-        this.eventStack, this.rule, this.roomOwnerId, this.round, this.dealerId,
+        this.eventStack, this.rule, this.roomOwnerId, this.round, this.dealerId, this.dealerId,
         trickingPlayers, this.myCardIds, this.deck,
         0, null, [], 1, this.scoreBoard
         );
@@ -262,14 +270,15 @@ export class TrickPhase implements GameState {
   readonly eventStack: GameEventStack,
   readonly rule: GameRule,
   readonly roomOwnerId: string,
-  readonly round: number,
+  public round: number,
   private dealerId: string,
+  private nextPlayerId: string,
   readonly players: TrickingPlayer[],
   public myCardIds: string[],
   readonly deck: number,
   readonly stack: number,
   readonly mustFollow: MustFollow | null,
-  readonly field: { playerId: string, card: Card }[],
+  public field: { playerId: string, card: Card }[],
   readonly trick: number,
   readonly scoreBoard: ScoreBoard,
   ) {
@@ -288,12 +297,16 @@ export class TrickPhase implements GameState {
           card: this.players[idx].card - 1,
         }
 
+        if (played.getPlayerId() == this.myPlayerId) {
+          this.removeMyCards([played.getPlayedCard()!.getCardId()]);
+        }
+
         this.field.push({
           playerId: played.getPlayerId(),
           card: played.getPlayedCard()!
         });
 
-        this.dealerId = this.players[(idx + 1) % this.players.length].playerId;
+        this.nextPlayerId = this.players[(idx + 1) % this.players.length].playerId;
 
         return Object.create(this);
 
@@ -334,6 +347,8 @@ export class TrickPhase implements GameState {
         });
 
         this.scoreBoard.push(roundScoreMap);
+        this.field = [];
+
         return this;
 
       case GameEvent.EventCase.ROUND_STARTED:
@@ -367,9 +382,9 @@ export class TrickPhase implements GameState {
   addMyCards = (cards: string[]) => this.myCardIds.push(...cards);
 
   removeMyCards = (cards: string[]) =>
-  this.myCardIds = this.myCardIds.filter(cardId => cards.includes(cardId));
+  this.myCardIds = this.myCardIds.filter(cardId => !cards.includes(cardId));
 
-  isMyTurn = () => this.myPlayerId === this.dealerId;
+  isMyTurn = () => this.myPlayerId === this.nextPlayerId;
 
   changeBidDeclare = (playerId: string, newBid: number) => {
     const idx = this.players.findIndex(player => player.playerId == playerId);
@@ -379,6 +394,9 @@ export class TrickPhase implements GameState {
     }
   }
 
+  getPlayerOf = (playerId: string) =>
+  this.players.find(p => p.playerId == playerId);
+
   getDealerId = () => this.dealerId;
 
   getMyCardIds = () => [...this.myCardIds];
@@ -386,7 +404,6 @@ export class TrickPhase implements GameState {
   getDeck(): Map<string, Card> {
     return this.deckMap;
   }
-
 
 }
 

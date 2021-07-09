@@ -2,12 +2,34 @@ package gameserver.domain;
 
 import akka.actor.typed.ActorRef;
 import akka.serialization.jackson.CborSerializable;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
 
 import java.util.Set;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+@JsonSubTypes({
+        @JsonSubTypes.Type(name = "init", value = GameCommand.Init.class),
+        @JsonSubTypes.Type(name = "ping", value = GameCommand.Ping.class),
+        @JsonSubTypes.Type(name = "new_connection", value = GameCommand.NewConnection.class),
+        @JsonSubTypes.Type(name = "close_connection", value = GameCommand.CloseConnection.class),
+        @JsonSubTypes.Type(name = "join", value = GameCommand.Join.class),
+        @JsonSubTypes.Type(name = "leave", value = GameCommand.Leave.class),
+        @JsonSubTypes.Type(name = "game_start", value = GameCommand.GameStart.class),
+        @JsonSubTypes.Type(name = "bid_declare", value = GameCommand.BidDeclare.class),
+        @JsonSubTypes.Type(name = "play_card", value = GameCommand.PlayCard.class),
+        @JsonSubTypes.Type(name = "next_trick_lead_player_change", value = GameCommand.NextTrickLeadPlayerChange.class),
+        @JsonSubTypes.Type(name = "player_hand_change", value = GameCommand.PlayerHandChange.class),
+        @JsonSubTypes.Type(name = "future_predicate_finish", value = GameCommand.FuturePredicateFinish.class),
+        @JsonSubTypes.Type(name = "bid_declare_change", value = GameCommand.BidDeclareChange.class),
+        @JsonSubTypes.Type(name = "replay_game", value = GameCommand.ReplayGame.class),
+        @JsonSubTypes.Type(name = "end_game", value = GameCommand.EndGame.class),
+        @JsonSubTypes.Type(name = "snapshot_request", value = GameCommand.SnapshotRequest.class),
+        @JsonSubTypes.Type(name = "store", value = GameCommand.Store.class),
+})
 public interface GameCommand extends CborSerializable {
 
     public PlayerId callerId();

@@ -1,7 +1,4 @@
 import React, {useEffect, useState} from 'react';
-
-import {useHistory, useLocation, useParams} from 'react-router-dom';
-import {GamePlayer} from "../models/Models";
 import {GameServerSocketClient} from "../clients/GameServerSocketClient";
 import {Card, GameEvent} from "../proto/GameServerService_pb";
 import {
@@ -14,10 +11,13 @@ import {
   HandChangeWaitingPhase,
   NextTrickLeadPlayerChangingPhase,
   StartPhase,
+  TrickingPlayer,
   TrickPhase,
   WaitForInitialize
 } from "../models/GameModels";
 import {Avatar, Box, Button, ButtonBase, Container, Grid, makeStyles, Paper, Typography} from "@material-ui/core";
+import {GamePlayer} from "../models/Models";
+import {useHistory, useLocation, useParams} from "react-router-dom";
 
 export interface GameRoomProps {
   isJoin: boolean;
@@ -87,7 +87,7 @@ const SkulkingCardTricking = (props: {
 
   if (props.isMyHandCard && props.isMyTarn) {
     return <ButtonBase onClick={onPlayCard}>
-      cardContent
+      {cardContent}
     </ButtonBase>
   }
 
@@ -305,21 +305,162 @@ const FuturePredicateWaitingPhaseBoard = (props: { gameState: FuturePredicateWai
   );
 };
 
-const BidDeclareChangeWaitingPhaseBoard = (props: { gameState: BidDeclareChangeWaitingPhase, webSocketClient: GameServerSocketClient }) => {
+const TrickingPlayerBoard = (props: { players: TrickingPlayer[] }) => {
+  return <Grid container item xs={12} spacing={2}>
+    <Grid item xs={12}>
+      <Typography variant='h5'>プレイヤー</Typography>
+    </Grid>
+    {props.players.map(player =>
+    <Grid item xs={3}>
+      <Paper>
+        <Avatar/>
+        <Typography>
+          {`プレイヤー: ${player.playerId}`}
+        </Typography>
+        <Typography>
+          {`カード: ${player.card}`}
+        </Typography>
+        <Typography>
+          {`宣言したビッド: ${player.declaredBid}`}
+        </Typography>
+        <Typography>
+          {`勝利したトリック: ${player.tookTrick}`}
+        </Typography>
+        <Typography>
+          {`獲得したボーナス: ${player.tookBonus}`}
+        </Typography>
+      </Paper>
+    </Grid>
+    )}
+  </Grid>
+}
+
+const WaitingState = (props: { gameState: TrickPhase, waitFor: string }) => {
 
   return (
-  <React.Fragment>
-    Bid Declare Change Waiting !
-  </React.Fragment>
-  );
+  <Box>
+    <Grid container spacing={3}>
+      <Typography variant='h4'>{`${props.waitFor}を待機しています`}</Typography>
+      <TrickingPlayerBoard players={props.gameState.players}/>
+    </Grid>
+  </Box>
+  )
+}
+
+const BidDeclareChangeWaitingPhaseBoard = (props: { gameState: BidDeclareChangeWaitingPhase, webSocketClient: GameServerSocketClient }) => {
+  const gameRoomId = props.gameState.gameState.gameRoomId;
+  const myPlayerId = props.gameState.gameState.myPlayerId;
+  const myPlayer = props.gameState.gameState.getPlayerOf(myPlayerId)!;
+  const currentRound = props.gameState.gameState.round;
+
+  const onChangeBidDeclared = (changeBid: number) => {
+    props.webSocketClient.sendBidDeclareChange(gameRoomId, changeBid);
+  };
+
+  if (props.gameState.changingPlayerId == myPlayerId) {
+    return (
+    <Box>
+      <Grid container spacing={3}>
+        <Typography variant='h4'>ビッドの変更が可能です</Typography>
+        <TrickingPlayerBoard players={props.gameState.gameState.players}/>
+        <Typography variant='h5'>ビッドの変更</Typography>
+        <Grid container item xs={12} spacing={2}>
+          {[...new Array(3).keys()].map(i => i - 1).map(bid => {
+            if (myPlayer.declaredBid + bid <= currentRound && myPlayer.declaredBid + bid >= 0) {
+              return <Grid item xs={1}>
+                <Button variant='contained' color='secondary' onClick={() => onChangeBidDeclared(bid)}>
+                  {bid}
+                </Button>
+              </Grid>
+            }
+
+            return <Grid item xs={1}>
+              <Button variant='contained' color='secondary' disabled>
+                {bid}
+              </Button>
+            </Grid>;
+          })}
+        </Grid>
+      </Grid>
+    </Box>
+    )
+  }
+
+  return <WaitingState
+  gameState={props.gameState.gameState}
+  waitFor="ビッド値の変更"
+  />;
 };
 
 const FinishedPhaseBoard = (props: { gameState: FinishedPhase, webSocketClient: GameServerSocketClient }) => {
 
+  const gameRoomId = props.gameState.gameRoomId;
+
+  const onCloseGame = () => {
+    props.webSocketClient.sendEndGame(gameRoomId);
+  }
+
+  const onReplayGame = () => {
+    props.webSocketClient.sendReplayGame(gameRoomId);
+  }
+
   return (
-  <React.Fragment>
-    Finished !
-  </React.Fragment>
+  <Box>
+    <Grid container spacing={3}>
+      <Grid item xs={12}>
+        <Typography variant='h4'>ゲーム終了</Typography>
+      </Grid>
+      <Grid item xs={12}>
+        <Typography variant='h5'>スコア</Typography>
+      </Grid>
+      <Grid item xs={12}>
+        <table>
+          <thead>
+          <th colSpan={2}>Player 1</th>
+          <th colSpan={2}>Player 2</th>
+          </thead>
+          <tbody>
+          {[...props.gameState.gameScore.flatMap(round =>
+          [
+            <tr>
+              {[...round.keys()].flatMap(playerId => {
+                const roundScore = round.get(playerId)!;
+                return [
+                  <td>{roundScore.score}</td>,
+                  <td>{roundScore.bonus}</td>
+                ]
+              })}
+            </tr>,
+            <tr>
+              {[...round.keys()].map(playerId => {
+                const roundScore = round.get(playerId)!;
+                return <td colSpan={2}>{roundScore.score + roundScore.bonus}</td>;
+              })}
+            </tr>
+          ])]}
+          <tr>
+            <td colSpan={2}>total score</td>
+            <td colSpan={2}>total score</td>
+          </tr>
+          </tbody>
+        </table>
+      </Grid>
+      {props.gameState.roomOwnerId == props.gameState.myPlayerId &&
+      <Grid container item xs={12} justify='center' spacing={2}>
+          <Grid item>
+              <Button variant='contained' color='secondary' onClick={onCloseGame}>
+                  ゲームルームを終了する
+              </Button>
+          </Grid>
+          <Grid item>
+              <Button variant='contained' color='secondary' onClick={onReplayGame}>
+                  再度プレイする
+              </Button>
+          </Grid>
+      </Grid>
+      }
+    </Grid>
+  </Box>
   );
 };
 

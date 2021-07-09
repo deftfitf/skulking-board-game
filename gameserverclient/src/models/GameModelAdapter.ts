@@ -71,8 +71,9 @@ trickPhase: ProtoGameState.TrickPhase
   new GameEventStack(),
   gameRuleAdapter(trickPhase.getGameRule()!),
   roomOwnerId,
-  trickPhase.getTrick(),
+  trickPhase.getRound(),
   trickPhase.getDealerId(),
+  trickPhase.getNextPlayerId(),
   trickPhase.getTrickPlayersList().map(player => ({
     playerId: player.getPlayerId(),
     declaredBid: player.getDeclaredBid(),

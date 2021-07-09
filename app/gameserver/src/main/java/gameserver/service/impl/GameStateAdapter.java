@@ -139,6 +139,7 @@ public class GameStateAdapter {
                 .setGameRule(gameRule)
                 .setRound(trickPhase.getRound())
                 .setDealerId(trickPhase.getDealerId().getValue())
+                .setNextPlayerId(trickPhase.nextPlayer().getPlayerId().getValue())
                 .addAllTrickPlayers(trickPlayers)
                 .addAllCard(cards)
                 .addAllField(field)

@@ -426,6 +426,7 @@ message GameState {
         GameRule game_rule = 1;
         int32 round = 2;
         string dealer_id = 3;
+        string next_player_id = 12;
         repeated TrickPlayer trick_players = 4;
         repeated string card = 5;
         Card.CardColor must_follow = 6;

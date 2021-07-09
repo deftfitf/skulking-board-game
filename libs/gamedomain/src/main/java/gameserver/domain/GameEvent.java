@@ -1,6 +1,8 @@
 package gameserver.domain;
 
 import akka.serialization.jackson.CborSerializable;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.Value;
@@ -9,6 +11,39 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+@JsonSubTypes({
+        @JsonSubTypes.Type(name = "initialized", value = GameEvent.Initialized.class),
+        @JsonSubTypes.Type(name = "connection_established", value = GameEvent.ConnectionEstablished.class),
+        @JsonSubTypes.Type(name = "connection_closed", value = GameEvent.ConnectionClosed.class),
+        @JsonSubTypes.Type(name = "a_player_joined", value = GameEvent.APlayerJoined.class),
+        @JsonSubTypes.Type(name = "a_player_left", value = GameEvent.APlayerLeft.class),
+        @JsonSubTypes.Type(name = "room_dealer_changed", value = GameEvent.RoomDealerChanged.class),
+        @JsonSubTypes.Type(name = "game_started", value = GameEvent.GameStarted.class),
+        @JsonSubTypes.Type(name = "bidding_started", value = GameEvent.BiddingStarted.class),
+        @JsonSubTypes.Type(name = "a_player_bid_declared", value = GameEvent.APlayerBidDeclared.class),
+        @JsonSubTypes.Type(name = "round_started", value = GameEvent.RoundStarted.class),
+        @JsonSubTypes.Type(name = "trick_started", value = GameEvent.TrickStarted.class),
+        @JsonSubTypes.Type(name = "a_player_trick_played", value = GameEvent.APlayerTrickPlayed.class),
+        @JsonSubTypes.Type(name = "a_player_won", value = GameEvent.APlayerWon.class),
+        @JsonSubTypes.Type(name = "all_ran_away", value = GameEvent.AllRanAway.class),
+        @JsonSubTypes.Type(name = "kraken_appeared", value = GameEvent.KrakenAppeared.class),
+        @JsonSubTypes.Type(name = "declare_bid_change_available", value = GameEvent.DeclareBidChangeAvailable.class),
+        @JsonSubTypes.Type(name = "next_trick_lead_player_changeable_notice", value = GameEvent.NextTrickLeadPlayerChangeableNotice.class),
+        @JsonSubTypes.Type(name = "hand_change_available_notice", value = GameEvent.HandChangeAvailableNotice.class),
+        @JsonSubTypes.Type(name = "future_predicate_available", value = GameEvent.FuturePredicateAvailable.class),
+        @JsonSubTypes.Type(name = "round_finished", value = GameEvent.RoundFinished.class),
+        @JsonSubTypes.Type(name = "next_trick_lead_player_changed", value = GameEvent.NextTrickLeadPlayerChanged.class),
+        @JsonSubTypes.Type(name = "player_hand_changed", value = GameEvent.PlayerHandChanged.class),
+        @JsonSubTypes.Type(name = "future_predicated", value = GameEvent.FuturePredicated.class),
+        @JsonSubTypes.Type(name = "bid_declare_changed", value = GameEvent.BidDeclareChanged.class),
+        @JsonSubTypes.Type(name = "game_finished", value = GameEvent.GameFinished.class),
+        @JsonSubTypes.Type(name = "game_replayed", value = GameEvent.GameReplayed.class),
+        @JsonSubTypes.Type(name = "game_ended", value = GameEvent.GameEnded.class),
+        @JsonSubTypes.Type(name = "game_snapshot", value = GameEvent.GameSnapshot.class),
+        @JsonSubTypes.Type(name = "game_exception", value = GameEvent.GameException.class),
+        @JsonSubTypes.Type(name = "stored", value = GameEvent.Stored.class),
+})
 public interface GameEvent extends CborSerializable {
 
     default boolean isPublishOnly() {

@@ -427,9 +427,21 @@ public class GameRoomActorTest {
                         final var joinedPlayer = e.getPlayers();
                         assertThat(joinedPlayer.size()).isEqualTo(2);
                         joinedPlayer.forEach(p -> assertThat(p.getCardIds().size()).isEqualTo(2)); // 2 cards are dealt
+                        assertThat(e.getRound()).isEqualTo(2);
                     });
             // bidding phase started
             probe.expectMessageClass(GameEvent.BiddingStarted.class);
+
+            gameRoom.tell(GameCommand.SnapshotRequest.builder().playerId(dealer).build());
+            // new bidding phase
+            assertThat(probe.receiveMessage())
+                    .asInstanceOf(InstanceOfAssertFactories.type(GameEvent.GameSnapshot.class))
+                    .satisfies(snapshot -> assertThat(snapshot.getGameState())
+                            .asInstanceOf(InstanceOfAssertFactories.type(GameState.BiddingPhase.class))
+                            .satisfies(biddingPhase -> {
+                                assertThat(biddingPhase.getRound()).isEqualTo(2);
+                                assertThat(biddingPhase.getDealerId()).isEqualTo(dealer);
+                            }));
         });
     }
 
