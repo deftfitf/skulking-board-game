@@ -457,12 +457,14 @@ message GameState {
 
     message HandChangeWaiting {
         string changing_player_id = 1;
-        TrickPhase trick_phase = 2;
+        repeated string draw_cards = 2;
+        TrickPhase trick_phase = 3;
     }
 
     message FuturePredicateWaiting {
         string predicating_player_id = 1;
-        TrickPhase trick_phase = 2;
+        repeated string deck_cards = 2;
+        TrickPhase trick_phase = 3;
     }
 
     message BidDeclareChangeWaiting {

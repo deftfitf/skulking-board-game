@@ -1,19 +1,25 @@
 export type GameRoom = {
   gameRoomId: string;
   roomOwnerId: string;
+  roomOwnerDisplayName: string;
+  roomOwnerIconUrl: string;
   gameState: "START_PHASE" | "GAME_PLAYING" | "GAME_FINISHED";
-  joinedPlayerIds: string[];
+  joinedPlayers: GamePlayer[];
 }
 
 export type GamePlayer = {
   playerId: string;
-  playerName: string;
-  icon: string;
+  displayName: string;
+  iconUrl: string;
 }
 
 export type GetGameRoomsRequest = {
   limit: number;
   exclusiveStartKey?: string;
+}
+
+export type GetGameRoomsResponse = {
+  gameRooms: GameRoom[];
 }
 
 export type UserRegisterRequest = {

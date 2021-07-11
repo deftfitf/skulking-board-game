@@ -497,6 +497,17 @@ public class GameRoomActorTest {
                     .playerId(participant).playedCard(purpleCard).build());
             // 1st trick finished
             probe.expectMessage(GameEvent.APlayerWon.builder().winnerId(dealer).card(greenCard).trickBonus(0).build());
+            assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                    .satisfies(trickStarted -> {
+                        assertThat(trickStarted.getTrick()).isEqualTo(2);
+                        assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                        assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                        assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(1);
+                        assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                        assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                        assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(0);
+                        assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(0);
+                    });
 
             // dealer plays 2nd trick
             gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(blackCard).build());
@@ -508,6 +519,17 @@ public class GameRoomActorTest {
                     .playerId(participant).playedCard(pirateCard).build());
             // 2nd trick finished
             probe.expectMessage(GameEvent.APlayerWon.builder().winnerId(participant).card(pirateCard).trickBonus(20).build());
+            assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                    .satisfies(trickStarted -> {
+                        assertThat(trickStarted.getTrick()).isEqualTo(3);
+                        assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                        assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                        assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(1);
+                        assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                        assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                        assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(1);
+                        assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(20);
+                    });
 
             // dealer plays 3rd trick
             gameRoom.tell(GameCommand.PlayCard.builder().playerId(participant).card(tigressCard.withIsPirates(false)).build());
@@ -603,7 +625,17 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.NextTrickLeadPlayerChange.builder().playerId(participant).newLeadPlayerId(dealer).build());
         probe.expectMessage(GameEvent.NextTrickLeadPlayerChanged.builder().playerId(participant).newLeadPlayerId(dealer).build());
 
-        probe.expectNoMessage();
+        assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                .satisfies(trickStarted -> {
+                    assertThat(trickStarted.getTrick()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                    assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                    assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(1);
+                    assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(0);
+                });
 
         // dealer plays 2nd trick
         gameRoom.tell(GameCommand.PlayCard.builder().playerId(dealer).card(blackCard).build());
@@ -681,7 +713,17 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.PlayerHandChange.builder().playerId(participant).returnCards(returnCards).build());
         probe.expectMessage(GameEvent.PlayerHandChanged.builder().playerId(participant).returnCards(returnCards).build());
 
-        probe.expectNoMessage();
+        assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                .satisfies(trickStarted -> {
+                    assertThat(trickStarted.getTrick()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                    assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                    assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(1);
+                    assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(0);
+                });
 
         // participant plays 2nd trick
         gameRoom.tell(GameCommand.PlayCard.builder().playerId(participant).card(deckSkulking).build());
@@ -695,6 +737,18 @@ public class GameRoomActorTest {
 
         // 2nd trick finished
         probe.expectMessage(GameEvent.APlayerWon.builder().winnerId(participant).card(deckSkulking).trickBonus(20).build());
+
+        assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                .satisfies(trickStarted -> {
+                    assertThat(trickStarted.getTrick()).isEqualTo(3);
+                    assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                    assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                    assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(20);
+                });
     }
 
     ///////////////////////////// BidDeclareChanging PHASE /////////////////////////////
@@ -757,7 +811,17 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.BidDeclareChange.builder().playerId(participant).bid(1).build());
         probe.expectMessage(GameEvent.BidDeclareChanged.builder().changedPlayerId(participant).changedBid(1).build());
 
-        probe.expectNoMessage();
+        assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                .satisfies(trickStarted -> {
+                    assertThat(trickStarted.getTrick()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                    assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                    assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(1);
+                    assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(0);
+                });
     }
 
     ///////////////////////////// FuturePredicating PHASE /////////////////////////////
@@ -823,7 +887,17 @@ public class GameRoomActorTest {
         gameRoom.tell(GameCommand.FuturePredicateFinish.builder().predicatePlayerId(participant).build());
         probe.expectMessage(GameEvent.FuturePredicated.builder().predicatedPlayerId(participant).build());
 
-        probe.expectNoMessage();
+        assertThat(probe.receiveMessage()).asInstanceOf(InstanceOfAssertFactories.type(GameEvent.TrickStarted.class))
+                .satisfies(trickStarted -> {
+                    assertThat(trickStarted.getTrick()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().size()).isEqualTo(2);
+                    assertThat(trickStarted.getPlayers().get(0).getPlayerId()).isEqualTo(dealer);
+                    assertThat(trickStarted.getPlayers().get(0).getTookTrick()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(0).getTookBonus()).isEqualTo(0);
+                    assertThat(trickStarted.getPlayers().get(1).getPlayerId()).isEqualTo(participant);
+                    assertThat(trickStarted.getPlayers().get(1).getTookTrick()).isEqualTo(1);
+                    assertThat(trickStarted.getPlayers().get(1).getTookBonus()).isEqualTo(0);
+                });
     }
 
     ///////////////////////////// Finished PHASE /////////////////////////////

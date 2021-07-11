@@ -143,8 +143,8 @@ const App = () => {
     auth={player !== null}
     onLogOut={() => setPlayer(null)}
     user={{
-      username: player?.playerName ?? 'unknown',
-      icon: player?.icon ?? 'unknown'
+      username: player?.displayName ?? 'unknown',
+      icon: player?.iconUrl ?? 'unknown'
     }}/>
 
     <section className={classes.root}>

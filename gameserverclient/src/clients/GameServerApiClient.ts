@@ -4,6 +4,7 @@ import {
   GameRoom,
   GameRoomCreateRequest,
   GetGameRoomsRequest,
+  GetGameRoomsResponse,
   UserRegisterRequest,
   UserRegisterResponse
 } from "../models/Models";
@@ -41,7 +42,7 @@ export class GameServerApiClient {
     return await this.get(`/gamerooms/${gameRoomId}`);
   }
 
-  getGameRooms: (request: GetGameRoomsRequest) => Promise<GameRoom[]> = async (request) => {
+  getGameRooms: (request: GetGameRoomsRequest) => Promise<GetGameRoomsResponse> = async (request) => {
     return await this.post("/gamerooms/", request);
   }
 

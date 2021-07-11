@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import websocketserver.model.GamePlayer;
 import websocketserver.repository.GamePlayerRepository;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class GamePlayerService {
@@ -24,6 +26,10 @@ public class GamePlayerService {
         final var newPlayer = new GamePlayer(playerName, encodedPassword);
 
         return gamePlayerRepository.save(newPlayer);
+    }
+
+    public Iterable<GamePlayer> getPlayers(List<String> playerIds) {
+        return gamePlayerRepository.findAllById(playerIds);
     }
 
 }

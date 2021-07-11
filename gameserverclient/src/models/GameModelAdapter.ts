@@ -174,7 +174,8 @@ export const snapshotToGameState = (myPlayerId: string, state: ProtoGameState): 
 
       return new HandChangeWaitingPhase(
       trickPhaseAdapter(gameRoomId, myPlayerId, roomOwnerId, deck, handChangeWaiting.getTrickPhase()!),
-      handChangeWaiting.getChangingPlayerId()
+      handChangeWaiting.getChangingPlayerId(),
+      handChangeWaiting.getDrawCardsList()
       );
 
     case ProtoGameState.StateCase.FUTURE_PREDICATE_WAITING:
@@ -182,7 +183,8 @@ export const snapshotToGameState = (myPlayerId: string, state: ProtoGameState): 
 
       return new FuturePredicateWaitingPhase(
       trickPhaseAdapter(gameRoomId, myPlayerId, roomOwnerId, deck, futurePredicateWaiting.getTrickPhase()!),
-      futurePredicateWaiting.getPredicatingPlayerId()
+      futurePredicateWaiting.getPredicatingPlayerId(),
+      futurePredicateWaiting.getDeckCardsList()
       );
 
     case ProtoGameState.StateCase.BID_DECLARE_CHANGE_WAITING:

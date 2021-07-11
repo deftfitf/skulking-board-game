@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {
+  Avatar,
   Box,
   Button,
   Container,
@@ -18,8 +19,10 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tooltip,
   Typography
 } from "@material-ui/core";
+import AvatarGroup from '@material-ui/lab/AvatarGroup';
 import {GamePlayer, GameRoom, GetGameRoomsRequest} from "../models/Models";
 import {gameServerApiClient} from "../module/axiousConfig";
 import {useHistory} from "react-router-dom";
@@ -179,7 +182,7 @@ const GameRoomList = (props: { gamePlayer: GamePlayer }) => {
       exclusiveStartKey: exclusiveStartKey
     }
     gameServerApiClient.getGameRooms(request)
-    .then(_gameRooms => setGameRooms(_gameRooms))
+    .then(_gameRooms => setGameRooms(_gameRooms.gameRooms))
     .catch(e => console.error(e));
   }
 
@@ -210,9 +213,22 @@ const GameRoomList = (props: { gamePlayer: GamePlayer }) => {
           {gameRooms.map((gameRoom) => (
           <TableRow key={gameRoom.gameRoomId}>
             <TableCell>{gameRoom.gameRoomId}</TableCell>
-            <TableCell>{gameRoom.roomOwnerId}</TableCell>
+            <TableCell>
+              <Tooltip title={gameRoom.roomOwnerDisplayName}>
+                <Avatar
+                alt={gameRoom.roomOwnerDisplayName}
+                src={gameRoom.roomOwnerIconUrl}/>
+              </Tooltip>
+            </TableCell>
             <TableCell>{gameRoom.gameState}</TableCell>
-            <TableCell>{gameRoom.joinedPlayerIds.join(",")}</TableCell>
+            <TableCell>
+              <AvatarGroup max={4}>{
+                gameRoom.joinedPlayers.map(joinedPlayer =>
+                <Tooltip title={joinedPlayer.displayName}>
+                  <Avatar alt={joinedPlayer.displayName} src={joinedPlayer.iconUrl}/>
+                </Tooltip>)
+              }</AvatarGroup>
+            </TableCell>
             <TableCell>
               <Button
               variant="outlined"
@@ -220,7 +236,7 @@ const GameRoomList = (props: { gamePlayer: GamePlayer }) => {
               onClick={() => history.push({
                 pathname: `/gamerooms/${gameRoom.gameRoomId}`,
                 state: {
-                  isJoin: !gameRoom.joinedPlayerIds.includes(props.gamePlayer.playerId)
+                  isJoin: !gameRoom.joinedPlayers.map(player => player.playerId).includes(props.gamePlayer.playerId)
                 }
               })}
               >

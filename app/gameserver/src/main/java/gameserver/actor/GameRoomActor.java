@@ -10,9 +10,7 @@ import akka.cluster.sharding.typed.javadsl.ClusterSharding;
 import akka.cluster.sharding.typed.javadsl.Entity;
 import akka.cluster.sharding.typed.javadsl.EntityTypeKey;
 import akka.japi.function.Procedure;
-import akka.persistence.typed.PersistenceId;
-import akka.persistence.typed.RecoveryCompleted;
-import akka.persistence.typed.SnapshotSelectionCriteria;
+import akka.persistence.typed.*;
 import akka.persistence.typed.javadsl.*;
 import dynamodbdao.GameRoomDynamoDBDao;
 import gameserver.domain.*;
@@ -66,6 +64,18 @@ public class GameRoomActor
 
                     final var gameRoom = GameRoomQueryAdapter.adapt(gameRoomId, state);
                     gameRoomDynamoDBDao.updateRoom(gameRoom);
+                })
+                .onSignal(SnapshotCompleted.class, (state, sig) -> {
+                    context.getLog().info("Snapshot Completed: {}", state);
+                })
+                .onSignal(SnapshotFailed.class, (state, sig) -> {
+                    context.getLog().error("Snapshot Failed: state={}, sig={}", state, sig);
+                })
+                .onSignal(DeleteEventsCompleted.class, (state, sig) -> {
+                    context.getLog().info("Delete Events Completed: {}", state);
+                })
+                .onSignal(DeleteEventsFailed.class, (state, sig) -> {
+                    context.getLog().error("Delete Events Failed: state={}, sig={}", state, sig);
                 })
                 .build();
     }
@@ -264,7 +274,7 @@ public class GameRoomActor
 
             if (state.getPlayerIds().size() <= 1) {
                 return Effect()
-                        .persist(left)
+                        .persist(GameEvent.GameEnded.builder().build())
                         .thenRun(effect)
                         .thenStop();
             }
@@ -478,8 +488,14 @@ public class GameRoomActor
                         GameState.StartPhase.empty(
                                 initialized.getGameRule(),
                                 initialized.getFirstDealerId()));
+        builder.forStateType(GameState.Cleared.class)
+                .onEvent(GameEvent.Initialized.class, initialized ->
+                        GameState.StartPhase.empty(
+                                initialized.getGameRule(),
+                                initialized.getFirstDealerId()));
 
         builder.forAnyState()
+                .onEvent(GameEvent.GameEnded.class, (s, e) -> GameState.Cleared.INSTANCE)
                 .onEvent(GameEvent.Stored.class, GameEvent.Stored::getState);
 
         builder.forStateType(GameState.StartPhase.class)
@@ -506,7 +522,6 @@ public class GameRoomActor
                 .onEvent(GameEvent.BidDeclareChanged.class, this::applyBidDeclareChanged);
 
         builder.forStateType(GameState.FinishedPhase.class)
-                .onEvent(GameEvent.GameEnded.class, (s, e) -> s)
                 .onEvent(GameEvent.GameReplayed.class, this::applyGameReplayed);
 
         return builder.build();
@@ -537,12 +552,12 @@ public class GameRoomActor
     private GameState applyAPlayerBidDeclared(GameState.BiddingPhase state, GameEvent.APlayerBidDeclared aPlayerBidDeclared) {
         state.bid(aPlayerBidDeclared.getPlayerId(), aPlayerBidDeclared.getBidDeclared());
 
-        if (state.canStartRound()) {
+        if (state.canStartTrick()) {
             final var trickPhase = state.startTrick();
             trickPhase.addGameEvent(GameEvent.TrickStarted.builder()
                     .deck(trickPhase.getDeck().size())
                     .trick(trickPhase.getTrick())
-                    .players(trickPhase.getPlayers())
+                    .players(trickPhase.getPlayerIds().stream().map(trickPhase::getPlayerOf).collect(Collectors.toList()))
                     .build());
             return trickPhase;
         }
@@ -617,6 +632,12 @@ public class GameRoomActor
                     .dealerId(biddingPhase.getDealerId())
                     .build());
             return biddingPhase;
+        } else if (state.isFinishedTrick()) {
+            state.addGameEvent(GameEvent.TrickStarted.builder()
+                    .trick(state.getTrick())
+                    .deck(state.getDeck().size())
+                    .players(state.getPlayerIds().stream().map(state::getPlayerOf).collect(Collectors.toList()))
+                    .build());
         }
 
         return state;
@@ -728,23 +749,15 @@ public class GameRoomActor
     }
 
     @Override
-    public SnapshotSelectionCriteria snapshotSelectionCriteria() {
-        return SnapshotSelectionCriteria.latest();
-    }
-
-    @Override
-    public boolean shouldSnapshot(GameState gameState, GameEvent event, long sequenceNr) {
-        return super.shouldSnapshot(gameState, event, sequenceNr);
-    }
-
-    @Override
     public RetentionCriteria retentionCriteria() {
-        return RetentionCriteria.snapshotEvery(100, 2);
+        return RetentionCriteria
+                .snapshotEvery(100, 2)
+                .withDeleteEventsOnSnapshot();
     }
 
     @Override
     public Recovery recovery() {
-        return super.recovery();
+        return Recovery.withSnapshotSelectionCriteria(SnapshotSelectionCriteria.latest());
     }
 
 }

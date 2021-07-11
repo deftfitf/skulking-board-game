@@ -34,6 +34,39 @@ public interface GameState extends CborSerializable {
 
     List<GameEvent> getEventQueue();
 
+    class Cleared implements GameState {
+
+        public static final Cleared INSTANCE = new Cleared();
+
+        private Cleared() {
+        }
+
+        @Override
+        public PlayerId getRoomOwnerId() {
+            return null;
+        }
+
+        @Override
+        public GameRule getRule() {
+            return null;
+        }
+
+        @Override
+        public GameStateType getStateName() {
+            return null;
+        }
+
+        @Override
+        public List<PlayerId> getPlayerIds() {
+            return null;
+        }
+
+        @Override
+        public List<GameEvent> getEventQueue() {
+            return null;
+        }
+    }
+
     @Data
     @Builder
     class StartPhase implements GameState {
@@ -158,7 +191,7 @@ public interface GameState extends CborSerializable {
             return InputCheckResult.ApplyableInput.INSTANCE;
         }
 
-        public boolean canStartRound() {
+        public boolean canStartTrick() {
             return idToPlayer.values().stream()
                     .allMatch(p -> p.getDeclaredBid() != null);
         }

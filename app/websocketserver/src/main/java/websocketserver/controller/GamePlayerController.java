@@ -9,8 +9,11 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.WebSession;
 import websocketserver.service.GamePlayerService;
+import websocketserver.viewmodel.GamePlayerViewModel;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,12 +35,29 @@ public class GamePlayerController {
         );
 
         webSession.save();
-        return new UserRegisterResponse(createdPlayer.getUsername());
+        return new UserRegisterResponse(new GamePlayerViewModel(
+                createdPlayer.getPlayerId(),
+                createdPlayer.getPlayerDisplayName(),
+                createdPlayer.getIconUrl()));
     }
 
     @GetMapping("/mypage")
     public String mypage(Model model) {
         return "players/mypage";
+    }
+
+    @PostMapping("/")
+    public GetPlayersResponse getPlayers(
+            @RequestBody GetPlayersRequest getPlayersRequest
+    ) {
+        final var gamePlayers = new ArrayList<GamePlayerViewModel>();
+        gamePlayerService.getPlayers(getPlayersRequest.getPlayerIds())
+                .forEach(gamePlayer -> gamePlayers.add(new GamePlayerViewModel(
+                        gamePlayer.getPlayerId(),
+                        gamePlayer.getPlayerDisplayName(),
+                        gamePlayer.getIconUrl())));
+
+        return new GetPlayersResponse(gamePlayers);
     }
 
     @Value
@@ -50,7 +70,17 @@ public class GamePlayerController {
     @Value
     @Validated
     public static class UserRegisterResponse {
-        @NotNull String playerId;
+        @NotNull GamePlayerViewModel gamePlayer;
+    }
+
+    @Value
+    public static class GetPlayersRequest {
+        List<String> playerIds;
+    }
+
+    @Value
+    public static class GetPlayersResponse {
+        List<GamePlayerViewModel> gamePlayers;
     }
 
 }

@@ -15,7 +15,18 @@ import {
   TrickPhase,
   WaitForInitialize
 } from "../models/GameModels";
-import {Avatar, Box, Button, ButtonBase, Container, Grid, makeStyles, Paper, Typography} from "@material-ui/core";
+import {
+  Avatar,
+  Box,
+  Button,
+  ButtonBase,
+  CircularProgress,
+  Container,
+  Grid,
+  makeStyles,
+  Paper,
+  Typography
+} from "@material-ui/core";
 import {GamePlayer} from "../models/Models";
 import {useHistory, useLocation, useParams} from "react-router-dom";
 
@@ -50,37 +61,36 @@ const SkulkingCard = (props: { cardId: string }) => {
 
 const SkulkingCardTricking = (props: {
   gameRoomId: string,
-  _card: Card,
+  card: Card,
   isMyHandCard: boolean,
   isMyTarn: boolean,
   webSocketClient: GameServerSocketClient
 }) => {
   const classes = useStyle();
-  const [card, setCard] = useState<Card>(props._card);
 
   const onPlayCard = () => {
-    props.webSocketClient.sendPlayCard(props.gameRoomId, card);
+    props.webSocketClient.sendPlayCard(props.gameRoomId, props.card);
   }
 
   let cardContent: JSX.Element;
-  switch (card.getCardCase()) {
+  switch (props.card.getCardCase()) {
     case Card.CardCase.TIGRESS:
       // TODO: 選択制popup
       cardContent = <Paper className={classes.card}>
-        {`${card.getCardId()}`}
+        {`${props.card.getCardId()}`}
       </Paper>
       break;
 
     case Card.CardCase.RASCAL_OF_ROATAN:
       // TODO: 選択制popup
       cardContent = <Paper className={classes.card}>
-        {`${card.getCardId()}`}
+        {`${props.card.getCardId()}`}
       </Paper>
       break;
 
     default:
       cardContent = <Paper className={classes.card}>
-        {`${card.getCardId()}`}
+        {`${props.card.getCardId()}`}
       </Paper>
       break;
   }
@@ -98,7 +108,7 @@ const WaitForInitializeBoard = (props: { gameState: WaitForInitialize }) => {
 
   return (
   <React.Fragment>
-    Waiting !
+    <CircularProgress/>
   </React.Fragment>
   );
 };
@@ -124,7 +134,7 @@ const StartPhaseBoard = (props: { gameState: StartPhase, webSocketClient: GameSe
           <Typography variant='h5'>現在の参加者</Typography>
         </Grid>
         {props.gameState.playerIds.map(playerId =>
-        <Grid item xs={3}>
+        <Grid item xs={3} key={playerId}>
           <Paper>
             <Avatar/>
             <Typography>
@@ -166,7 +176,7 @@ const BiddingPhaseBoard = (props: { gameState: BiddingPhase, webSocketClient: Ga
           <Typography variant='h5'>プレイヤー</Typography>
         </Grid>
         {props.gameState.players.map(player =>
-        <Grid item xs={3}>
+        <Grid item xs={3} key={player.playerId}>
           <Paper>
             <Avatar/>
             <Typography>
@@ -187,7 +197,7 @@ const BiddingPhaseBoard = (props: { gameState: BiddingPhase, webSocketClient: Ga
       <Typography variant='h5'>手札</Typography>
       <Grid container item xs={12} spacing={2}>
         {props.gameState.myCardIds.map(myCardId =>
-        <Grid item>
+        <Grid item key={myCardId}>
           <SkulkingCard cardId={myCardId}/>
         </Grid>
         )}
@@ -195,7 +205,7 @@ const BiddingPhaseBoard = (props: { gameState: BiddingPhase, webSocketClient: Ga
       <Typography variant='h5'>ビッド</Typography>
       <Grid container item xs={12} spacing={2}>
         {[...new Array(props.gameState.round + 1).keys()]
-        .map(bid => <Grid item>
+        .map(bid => <Grid item key={bid}>
           <Button
           variant='contained' color='secondary' value={bid}
           onClick={() => onSendBid(bid)}
@@ -212,9 +222,7 @@ const BiddingPhaseBoard = (props: { gameState: BiddingPhase, webSocketClient: Ga
 
 const TrickPhaseBoard = (props: { gameState: TrickPhase, webSocketClient: GameServerSocketClient }) => {
 
-  const onPlayCard = (card: Card) => {
-    props.webSocketClient.sendPlayCard(props.gameState.gameRoomId, card);
-  };
+  console.log(props.gameState.myCardIds);
 
   return (
   <Box>
@@ -225,7 +233,7 @@ const TrickPhaseBoard = (props: { gameState: TrickPhase, webSocketClient: GameSe
           <Typography variant='h5'>プレイヤー</Typography>
         </Grid>
         {props.gameState.players.map(player =>
-        <Grid item xs={3}>
+        <Grid item xs={3} key={player.playerId}>
           <Paper>
             <Avatar/>
             <Typography>
@@ -250,10 +258,10 @@ const TrickPhaseBoard = (props: { gameState: TrickPhase, webSocketClient: GameSe
       <Typography variant='h5'>手札</Typography>
       <Grid container item xs={12} spacing={2}>
         {props.gameState.myCardIds.map(myCardId =>
-        <Grid item>
+        <Grid item key={myCardId}>
           <SkulkingCardTricking
           gameRoomId={props.gameState.gameRoomId}
-          _card={props.gameState.getDeck().get(myCardId)!}
+          card={props.gameState.getDeck().get(myCardId)!}
           isMyHandCard={true}
           isMyTarn={props.gameState.isMyTurn()}
           webSocketClient={props.webSocketClient}/>
@@ -263,10 +271,10 @@ const TrickPhaseBoard = (props: { gameState: TrickPhase, webSocketClient: GameSe
       <Typography variant='h5'>フィールド</Typography>
       <Grid container item xs={12} spacing={2}>
         {props.gameState.field.map(field =>
-        <Grid item>
+        <Grid item key={field.card.getCardId()}>
           <SkulkingCardTricking
           gameRoomId={props.gameState.gameRoomId}
-          _card={field.card}
+          card={field.card}
           isMyHandCard={false}
           isMyTarn={props.gameState.isMyTurn()}
           webSocketClient={props.webSocketClient}/>
@@ -277,63 +285,6 @@ const TrickPhaseBoard = (props: { gameState: TrickPhase, webSocketClient: GameSe
   </Box>
   );
 };
-
-const NextTrickLeadPlayerChangingPhaseBoard = (props: { gameState: NextTrickLeadPlayerChangingPhase, webSocketClient: GameServerSocketClient }) => {
-
-  return (
-  <React.Fragment>
-    Next Trick Lead Player Changing!
-  </React.Fragment>
-  );
-};
-
-const HandChangeWaitingPhaseBoard = (props: { gameState: HandChangeWaitingPhase, webSocketClient: GameServerSocketClient }) => {
-
-  return (
-  <React.Fragment>
-    Hand Change Waiting !
-  </React.Fragment>
-  );
-};
-
-const FuturePredicateWaitingPhaseBoard = (props: { gameState: FuturePredicateWaitingPhase, webSocketClient: GameServerSocketClient }) => {
-
-  return (
-  <React.Fragment>
-    Future Predicate Waiting !
-  </React.Fragment>
-  );
-};
-
-const TrickingPlayerBoard = (props: { players: TrickingPlayer[] }) => {
-  return <Grid container item xs={12} spacing={2}>
-    <Grid item xs={12}>
-      <Typography variant='h5'>プレイヤー</Typography>
-    </Grid>
-    {props.players.map(player =>
-    <Grid item xs={3}>
-      <Paper>
-        <Avatar/>
-        <Typography>
-          {`プレイヤー: ${player.playerId}`}
-        </Typography>
-        <Typography>
-          {`カード: ${player.card}`}
-        </Typography>
-        <Typography>
-          {`宣言したビッド: ${player.declaredBid}`}
-        </Typography>
-        <Typography>
-          {`勝利したトリック: ${player.tookTrick}`}
-        </Typography>
-        <Typography>
-          {`獲得したボーナス: ${player.tookBonus}`}
-        </Typography>
-      </Paper>
-    </Grid>
-    )}
-  </Grid>
-}
 
 const WaitingState = (props: { gameState: TrickPhase, waitFor: string }) => {
 
@@ -367,7 +318,7 @@ const BidDeclareChangeWaitingPhaseBoard = (props: { gameState: BidDeclareChangeW
         <Grid container item xs={12} spacing={2}>
           {[...new Array(3).keys()].map(i => i - 1).map(bid => {
             if (myPlayer.declaredBid + bid <= currentRound && myPlayer.declaredBid + bid >= 0) {
-              return <Grid item xs={1}>
+              return <Grid item xs={1} key={bid}>
                 <Button variant='contained' color='secondary' onClick={() => onChangeBidDeclared(bid)}>
                   {bid}
                 </Button>
@@ -391,6 +342,167 @@ const BidDeclareChangeWaitingPhaseBoard = (props: { gameState: BidDeclareChangeW
   waitFor="ビッド値の変更"
   />;
 };
+
+const NextTrickLeadPlayerChangingPhaseBoard = (props: { gameState: NextTrickLeadPlayerChangingPhase, webSocketClient: GameServerSocketClient }) => {
+  const gameRoomId = props.gameState.gameState.gameRoomId;
+  const myPlayerId = props.gameState.gameState.myPlayerId;
+
+  const onChangeNextTrickLead = (newLeadPlayerId: string) => {
+    props.webSocketClient.sendNextTrickLeadPlayerChange(gameRoomId, newLeadPlayerId);
+  };
+
+  if (props.gameState.changingPlayerId == myPlayerId) {
+    return (
+    <Box>
+      <Grid container spacing={3}>
+        <Typography variant='h4'>ディーラーの変更が可能です</Typography>
+        <TrickingPlayerBoard players={props.gameState.gameState.players}/>
+        <Typography variant='h5'>ディーラーの変更</Typography>
+        <Grid container item xs={12} spacing={2}>
+          {
+            props.gameState.gameState.players.map(player => {
+              return <Grid item key={player.playerId}>
+                <Button variant='contained' color='secondary' onClick={() => onChangeNextTrickLead(player.playerId)}>
+                  {player.playerId}
+                </Button>
+              </Grid>
+            })
+          }
+        </Grid>
+      </Grid>
+    </Box>
+    )
+  }
+
+  return <WaitingState
+  gameState={props.gameState.gameState}
+  waitFor="次のトリックのディーラー変更待ち"
+  />;
+};
+
+const HandChangeWaitingPhaseBoard = (props: { gameState: HandChangeWaitingPhase, webSocketClient: GameServerSocketClient }) => {
+  const gameRoomId = props.gameState.gameState.gameRoomId;
+  const myPlayerId = props.gameState.gameState.myPlayerId;
+  const [selectedCard, setSelectedCard] = useState<string[]>([]);
+
+  const onSelectCard = (cardId: string) => {
+    if (selectedCard.includes(cardId)) {
+      setSelectedCard(old => old.filter(id => id != cardId));
+    } else if (selectedCard.length < props.gameState.drawCardIds!.length) {
+      setSelectedCard(old => [...old, cardId]);
+    }
+  }
+
+  const onChangeHandCard = () => {
+    props.webSocketClient.sendPlayerHandChange(gameRoomId, selectedCard);
+  };
+
+  if (props.gameState.changingPlayerId == myPlayerId) {
+    return (
+    <Box>
+      <Grid container spacing={3}>
+        <Typography variant='h4'>手札の変更が可能です</Typography>
+        <TrickingPlayerBoard players={props.gameState.gameState.players}/>
+        <Typography variant='h5'>手札の変更</Typography>
+        <Grid container item xs={12} spacing={2}>
+          {
+            [...props.gameState.gameState.myCardIds, ...props.gameState.drawCardIds!].map(cardId => {
+              return <Box>
+                <ButtonBase onClick={() => onSelectCard(cardId)}>
+                  <SkulkingCard cardId={cardId}/>
+                </ButtonBase>
+              </Box>
+            })
+          }
+        </Grid>
+        {selectedCard.length >= props.gameState.drawCardIds!.length &&
+        <Grid container item xs={12}>
+            <Button variant='contained' color='secondary'
+                    onClick={onChangeHandCard}
+            >
+                手札を交換する
+            </Button>
+        </Grid>
+        }
+      </Grid>
+    </Box>
+    );
+  }
+
+  return <WaitingState
+  gameState={props.gameState.gameState}
+  waitFor="手札の変更"
+  />;
+};
+
+const FuturePredicateWaitingPhaseBoard = (props: { gameState: FuturePredicateWaitingPhase, webSocketClient: GameServerSocketClient }) => {
+  const gameRoomId = props.gameState.gameState.gameRoomId;
+  const myPlayerId = props.gameState.gameState.myPlayerId;
+
+  const onFinishFuturePredicate = () => {
+    props.webSocketClient.sendFuturePredicateFinish(gameRoomId);
+  };
+
+  if (props.gameState.predicatingPlayerId == myPlayerId) {
+    return (
+    <Box>
+      <Grid container spacing={3}>
+        <Typography variant='h4'>現在の山札の閲覧が可能です</Typography>
+        <TrickingPlayerBoard players={props.gameState.gameState.players}/>
+        <Typography variant='h5'>山札の閲覧</Typography>
+        <Grid container item xs={12} spacing={2}>
+          {
+            props.gameState.deckCards.map(cardId =>
+            <Grid item><SkulkingCard cardId={cardId}/></Grid>
+            )
+          }
+        </Grid>
+        <Grid container item xs={12} spacing={2}>
+          <Button
+          color='secondary' variant='contained'
+          onClick={onFinishFuturePredicate}
+          >閲覧を終了する</Button>
+        </Grid>
+      </Grid>
+    </Box>
+    )
+  }
+
+  return <WaitingState
+  gameState={props.gameState.gameState}
+  waitFor="山札の閲覧終了待ち"
+  />;
+};
+
+const TrickingPlayerBoard = (props: { players: TrickingPlayer[] }) => {
+  return <Grid container item xs={12} spacing={2}>
+    <Grid item xs={12}>
+      <Typography variant='h5'>プレイヤー</Typography>
+    </Grid>
+    {props.players.map(player =>
+    <Grid item xs={3}>
+      <Paper>
+        <Avatar/>
+        <Typography>
+          {`プレイヤー: ${player.playerId}`}
+        </Typography>
+        <Typography>
+          {`カード: ${player.card}`}
+        </Typography>
+        <Typography>
+          {`宣言したビッド: ${player.declaredBid}`}
+        </Typography>
+        <Typography>
+          {`勝利したトリック: ${player.tookTrick}`}
+        </Typography>
+        <Typography>
+          {`獲得したボーナス: ${player.tookBonus}`}
+        </Typography>
+      </Paper>
+    </Grid>
+    )}
+  </Grid>
+}
 
 const FinishedPhaseBoard = (props: { gameState: FinishedPhase, webSocketClient: GameServerSocketClient }) => {
 

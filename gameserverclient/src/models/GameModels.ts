@@ -52,6 +52,7 @@ myPlayerId: string,
 eventStack: GameEventStack,
 gameRule: GameRule,
 roomOwnerId: string,
+dealerId: string,
 scoreBoard: ScoreBoard,
 event: GameEvent.RoundStarted
 ) => {
@@ -67,7 +68,7 @@ event: GameEvent.RoundStarted
   gameRoomId,
   myPlayerId,
   eventStack, gameRule,
-  roomOwnerId, roomOwnerId,
+  roomOwnerId, dealerId,
   event.getDeck(), biddingPlayers,
   event.getCardList(),
   null, event.getRound(),
@@ -151,7 +152,7 @@ export class StartPhase implements GameState {
         this.deck,
         this.gameRoomId,
         this.myPlayerId, this.eventStack, this.rule,
-        this.roomOwnerId, [], event.getRoundStarted()!
+        this.roomOwnerId, this.roomOwnerId, [], event.getRoundStarted()!
         );
 
       default:
@@ -196,7 +197,6 @@ export class BiddingPhase implements GameState {
   ) {
   }
 
-  // TODO: bid中の順序, フィールドのリカバリがおかしい
   applyEvent(event: GameEvent): GameState {
     this.eventStack.appendGameEvent(event);
 
@@ -271,8 +271,8 @@ export class TrickPhase implements GameState {
   readonly rule: GameRule,
   readonly roomOwnerId: string,
   public round: number,
-  private dealerId: string,
-  private nextPlayerId: string,
+  public dealerId: string,
+  public nextPlayerId: string,
   readonly players: TrickingPlayer[],
   public myCardIds: string[],
   readonly deck: number,
@@ -297,18 +297,35 @@ export class TrickPhase implements GameState {
           card: this.players[idx].card - 1,
         }
 
+        let myCards = this.myCardIds;
         if (played.getPlayerId() == this.myPlayerId) {
-          this.removeMyCards([played.getPlayedCard()!.getCardId()]);
+          myCards = this.myCardIds.filter(cardId => cardId != played.getPlayedCard()!.getCardId());
         }
 
-        this.field.push({
+        const nextPlayerId = this.players[(idx + 1) % this.players.length].playerId;
+
+        return new TrickPhase(
+        this.deckMap,
+        this.gameRoomId,
+        this.myPlayerId,
+        this.eventStack,
+        this.rule,
+        this.roomOwnerId,
+        this.round,
+        this.dealerId,
+        nextPlayerId,
+        this.players,
+        myCards,
+        this.deck,
+        this.stack,
+        this.mustFollow,
+        [...this.field, {
           playerId: played.getPlayerId(),
           card: played.getPlayedCard()!
-        });
-
-        this.nextPlayerId = this.players[(idx + 1) % this.players.length].playerId;
-
-        return Object.create(this);
+        }],
+        this.trick,
+        this.scoreBoard
+        );
 
       case GameEvent.EventCase.NEXT_TRICK_LEAD_PLAYER_CHANGEABLE_NOTICE:
         const nextTrickLeadPlayerChangeableNotice = event.getNextTrickLeadPlayerChangeableNotice()!;
@@ -328,13 +345,46 @@ export class TrickPhase implements GameState {
 
         return new FuturePredicateWaitingPhase(this,
         targetPlayerId,
-        targetPlayerId == this.myPlayerId ? futurePredicateNotice.getDeckCardList() : undefined);
+        futurePredicateNotice.getDeckCardList());
 
       case GameEvent.EventCase.DECLARE_BID_CHANGE_AVAILABLE:
         const declareBidChangeAvailable = event.getDeclareBidChangeAvailable()!;
 
         return new BidDeclareChangeWaitingPhase(this,
         declareBidChangeAvailable.getPlayerId());
+
+      case GameEvent.EventCase.A_PLAYER_WON: {
+        const aAPlayerWon = event.getAPlayerWon()!;
+        const idx = this.players.findIndex(player => player.playerId == aAPlayerWon.getWinnerId());
+        this.players[idx] = {
+          ...this.players[idx],
+          tookTrick: this.players[idx].tookTrick + 1,
+          tookBonus: this.players[idx].tookBonus + aAPlayerWon.getTrickBonus()
+        }
+        this.dealerId = aAPlayerWon.getWinnerId();
+        this.nextPlayerId = aAPlayerWon.getWinnerId();
+        this.field = [];
+
+        return Object.create(this);
+      }
+
+      case GameEvent.EventCase.ALL_RAN_AWAY:
+        const allRanAway = event.getAllRanAway()!;
+
+        this.dealerId = allRanAway.getWinnerId();
+        this.nextPlayerId = allRanAway.getWinnerId();
+        this.field = [];
+
+        return Object.create(this);
+
+      case GameEvent.EventCase.KRAKEN_APPEARED:
+        const krakenAppeared = event.getKrakenAppeared()!;
+
+        this.dealerId = krakenAppeared.getMustHaveWon();
+        this.nextPlayerId = krakenAppeared.getMustHaveWon();
+        this.field = [];
+
+        return Object.create(this);
 
       case GameEvent.EventCase.ROUND_FINISHED:
         const roundFinished = event.getRoundFinished()!;
@@ -349,14 +399,32 @@ export class TrickPhase implements GameState {
         this.scoreBoard.push(roundScoreMap);
         this.field = [];
 
-        return this;
+        return new TrickPhase(
+        this.deckMap,
+        this.gameRoomId,
+        this.myPlayerId,
+        this.eventStack,
+        this.rule,
+        this.roomOwnerId,
+        this.round,
+        this.dealerId,
+        this.nextPlayerId,
+        this.players,
+        this.myCardIds,
+        this.deck,
+        this.stack,
+        this.mustFollow,
+        this.field,
+        this.trick,
+        this.scoreBoard
+        );
 
       case GameEvent.EventCase.ROUND_STARTED:
         return createBiddingPhase(
         this.deckMap,
         this.gameRoomId,
         this.myPlayerId, this.eventStack, this.rule,
-        this.roomOwnerId, this.scoreBoard, event.getRoundStarted()!
+        this.roomOwnerId, this.dealerId, this.scoreBoard, event.getRoundStarted()!
         );
 
       case GameEvent.EventCase.GAME_FINISHED:
@@ -380,9 +448,6 @@ export class TrickPhase implements GameState {
   changeLeadPlayerId = (newLeadPlayerId: string) => this.dealerId = newLeadPlayerId;
 
   addMyCards = (cards: string[]) => this.myCardIds.push(...cards);
-
-  removeMyCards = (cards: string[]) =>
-  this.myCardIds = this.myCardIds.filter(cardId => !cards.includes(cardId));
 
   isMyTurn = () => this.myPlayerId === this.nextPlayerId;
 
@@ -455,11 +520,31 @@ export class HandChangeWaitingPhase implements GameState {
         const handChanged = event.getPlayerHandChanged()!;
 
         if (handChanged.getPlayerId() == this.gameState.myPlayerId) {
-          this.gameState.addMyCards(this.drawCardIds!);
-          this.gameState.removeMyCards(handChanged.getReturnCardsList());
+          const myNewCards = [...this.gameState.myCardIds, ...this.drawCardIds!].filter(cardId => {
+            return !handChanged.getReturnCardsList().includes(cardId);
+          });
+          return new TrickPhase(
+          this.gameState.deckMap,
+          this.gameState.gameRoomId,
+          this.gameState.myPlayerId,
+          this.gameState.eventStack,
+          this.gameState.rule,
+          this.gameState.roomOwnerId,
+          this.gameState.round,
+          this.gameState.dealerId,
+          this.gameState.nextPlayerId,
+          this.gameState.players,
+          myNewCards,
+          this.gameState.deck,
+          this.gameState.stack,
+          this.gameState.mustFollow,
+          this.gameState.field,
+          this.gameState.trick,
+          this.gameState.scoreBoard
+          );
         }
 
-        return this.gameState;
+        return this;
 
       default:
         return this;
@@ -478,14 +563,14 @@ export class FuturePredicateWaitingPhase implements GameState {
   constructor(
   readonly gameState: TrickPhase,
   readonly predicatingPlayerId: string,
-  readonly deckCards?: string[],
+  readonly deckCards: string[],
   ) {
   }
 
   applyEvent(event: GameEvent): GameState {
     switch (event.getEventCase()) {
       case GameEvent.EventCase.FUTURE_PREDICATED:
-        return this.gameState;
+        return Object.create(this.gameState);
 
       default:
         return this;
@@ -519,7 +604,7 @@ export class BidDeclareChangeWaitingPhase implements GameState {
         bidDeclareChanged.getChangedPlayerId(),
         bidDeclareChanged.getChangedBid());
 
-        return this.gameState;
+        return Object.create(this.gameState);
 
       default:
         return this;
@@ -559,7 +644,7 @@ export class FinishedPhase implements GameState {
         this.deck,
         this.gameRoomId,
         this.myPlayerId, this.eventStack, this.rule,
-        this.roomOwnerId, [], event.getRoundStarted()!
+        this.roomOwnerId, this.winnerId, [], event.getRoundStarted()!
         );
 
       default:

@@ -1,5 +1,6 @@
 package gameserver.service.impl;
 
+import gameserver.domain.Card;
 import gameserver.domain.CardId;
 import gameserver.domain.GameState;
 import gameserver.domain.PlayerId;
@@ -76,12 +77,14 @@ public class GameStateAdapter {
             final var waiting = (GameState.HandChangeWaiting) gameState;
             bldr.setHandChangeWaiting(gameserver.service.grpc.GameState.HandChangeWaiting.newBuilder()
                     .setChangingPlayerId(waiting.getChangingPlayerId().getValue())
+                    .addAllDrawCards(waiting.getDrawCardIds().stream().map(CardId::getId).collect(Collectors.toList()))
                     .setTrickPhase(adapt(myPlayerId, waiting.getTrickPhase()))
                     .build());
         } else if (gameState instanceof GameState.FuturePredicateWaiting) {
             final var waiting = (GameState.FuturePredicateWaiting) gameState;
             bldr.setFuturePredicateWaiting(gameserver.service.grpc.GameState.FuturePredicateWaiting.newBuilder()
                     .setPredicatingPlayerId(waiting.getPredicatingPlayerId().getValue())
+                    .addAllDeckCards(waiting.getTrickPhase().getDeck().stream().map(Card::getCardId).map(CardId::getId).collect(Collectors.toList()))
                     .setTrickPhase(adapt(myPlayerId, waiting.getTrickPhase()))
                     .build());
         } else if (gameState instanceof GameState.BidDeclareChangeWaiting) {

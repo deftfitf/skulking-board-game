@@ -16,6 +16,7 @@ public class GamePlayer implements UserDetails {
     private String playerId;
     private String playerDisplayName;
     private String encodedPassword;
+    private String iconUrl;
 
     public GamePlayer(String playerDisplayName, String encodedPassword) {
         this.playerDisplayName = playerDisplayName;
@@ -40,6 +41,16 @@ public class GamePlayer implements UserDetails {
     public void setPlayerDisplayName(String playerDisplayName) {
         this.playerDisplayName = playerDisplayName;
     }
+
+    @DynamoDBAttribute
+    public String getIconUrl() {
+        return iconUrl;
+    }
+
+    public void setIconUrl(String iconUrl) {
+        this.iconUrl = iconUrl;
+    }
+
 
     @DynamoDBAttribute
     public String getEncodedPassword() {
